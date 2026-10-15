@@ -780,13 +780,13 @@ document.getElementById('demoBtn').addEventListener('click', async ()=>{
   await whenHeroes();
   renderMatch(data, meta);
   document.getElementById('matchId').value=data.match_id;
-  setStatus('Демо-катка • Pudge 2/12/3 — топ руинер 78% по объективным метрикам. Вставь свой Match ID чтобы проверить свою.', false);
+  setStatus(`Демо-катка • заруинил ${heroName(meta.top.p.hero_id)} (${meta.top.score}%), тащил ${heroName(meta.carry.p.hero_id)} (${Math.round(meta.carry.impact)}%) по объективным метрикам. Вставь свой Match ID чтобы проверить свою.`, false);
   // draw small delay for chart
   setTimeout(()=>window.scrollTo({top: document.getElementById('verdict').offsetTop - 70, behavior:'smooth'}), 100);
 });
 document.getElementById('shareBtn').addEventListener('click', async()=>{
   const id=document.getElementById('matchId').value.trim()||'demo';
-  const url=location.href.split('#')[0]+'#'+id;
+  const url=location.origin+location.pathname+'#'+id;
   try{ await navigator.clipboard.writeText(url); setStatus('Ссылка скопирована: '+url, false);}catch{ prompt('Скопируй ссылку:', url)}
 });
 
