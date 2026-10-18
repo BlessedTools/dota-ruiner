@@ -1,4 +1,12 @@
 node_modules/
-.DS_Store
+dist/
+coverage/
+.cache/
+playwright-report/
+test-results/
 *.log
-.env
+.env*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
