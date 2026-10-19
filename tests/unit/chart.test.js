@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildChartSeries, getAvailableChartMetrics } from '../../src/ui/chart.js';
+import { buildChartSeries, buildTooltipText, getAvailableChartMetrics } from '../../src/ui/chart.js';
 
 const match = {
   players: [
@@ -22,5 +22,11 @@ describe('observed chart series', () => {
 
   it('never turns final hero damage into a timeline', () => {
     expect(buildChartSeries(match, 'heroDamage')).toEqual([]);
+  });
+
+  it('builds a tooltip only from observed values at the selected minute', () => {
+    const series = buildChartSeries(match, 'gold');
+    expect(buildTooltipText(series, 1, (id) => `Hero ${id}`)).toBe('1 min · Hero 1: 100 · Hero 2: 90');
+    expect(buildTooltipText(series, 2, (id) => `Hero ${id}`)).toBe('2 min · Hero 2: 210');
   });
 });

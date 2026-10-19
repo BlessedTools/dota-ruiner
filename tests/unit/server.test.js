@@ -50,6 +50,7 @@ describe('secure static server', () => {
     const shell = await fetch(`${baseUrl}/`);
     expect(await shell.text()).toContain('DOTA RUINER');
     expect(shell.headers.get('content-security-policy')).toContain("default-src 'self'");
+    expect(shell.headers.get('content-security-policy')).toContain("form-action 'self'");
 
     const head = await fetch(`${baseUrl}/assets/app.js`, { method: 'HEAD' });
     expect(head.status).toBe(200);

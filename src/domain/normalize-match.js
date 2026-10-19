@@ -1,4 +1,4 @@
-const KNOWN_GAME_MODES = Object.freeze({ 23: 'turbo' });
+const STANDARD_GAME_MODES = new Set([1, 2, 3, 4, 5, 12, 16, 19, 22]);
 
 export function isFiniteMetric(value) {
   return typeof value === 'number' && Number.isFinite(value);
@@ -83,7 +83,14 @@ export function normalizeMatch(raw, options = {}) {
   if (!raw.version) warnings.push('unparsed-or-partial');
   if (errors.length) return { ok: false, match: null, warnings: unique(warnings), errors: unique(errors) };
 
-  const mode = KNOWN_GAME_MODES[raw.game_mode] || (raw.lobby_type === 7 ? 'ranked' : 'standard');
+  let mode;
+  if (raw.game_mode === 23) mode = 'turbo';
+  else if (raw.lobby_type === 7) mode = 'ranked';
+  else if (STANDARD_GAME_MODES.has(raw.game_mode)) mode = 'standard';
+  else {
+    mode = 'generic';
+    warnings.push('unsupported-mode');
+  }
   const match = {
     source: options.source === 'demo' || raw.source === 'demo' ? 'demo' : 'opendota',
     matchId: metric(raw.match_id),

@@ -49,5 +49,9 @@ describe('versioned scoring', () => {
   it('uses a dedicated turbo benchmark profile', () => {
     expect(calculateRuinScore(context(turbo)).profile).toBe('turbo');
     expect(calculateRuinScore(context(ranked)).profile).toBe('standard');
+    const custom = structuredClone(ranked);
+    custom.game_mode = 99;
+    custom.lobby_type = 0;
+    expect(calculateRuinScore(context(custom)).profile).toBe('generic');
   });
 });

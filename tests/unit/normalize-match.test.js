@@ -30,6 +30,15 @@ describe('normalizeMatch', () => {
     expect(normalizeMatch(clone(turbo)).match.mode).toBe('turbo');
   });
 
+  it('uses a conservative generic profile and warning for unsupported custom modes', () => {
+    const custom = clone(ranked);
+    custom.game_mode = 99;
+    custom.lobby_type = 0;
+    const result = normalizeMatch(custom);
+    expect(result.match.mode).toBe('generic');
+    expect(result.warnings).toContain('unsupported-mode');
+  });
+
   it.each([9, 11])('accepts a separated %i-player match with a composition warning', (count) => {
     const raw = clone(ranked);
     raw.players = count === 9 ? raw.players.slice(0, 9) : [...raw.players, { ...raw.players[0], player_slot: 5, hero_id: 11 }];

@@ -14,6 +14,12 @@ export function inferRole(player, team = [], hero = null) {
     return { position: 'hard-support', certainty: 'high', evidence: ['support-activity', 'low-farm'] };
   }
 
+  const supportItems = ['ward_observer', 'ward_sentry', 'smoke_of_deceit', 'dust', 'gem'];
+  const supportPurchases = supportItems.reduce((sum, item) => sum + (finite(player?.purchase?.[item]) ? player.purchase[item] : 0), 0);
+  if (supportPurchases >= 4 && finite(player.gpm) && player.gpm < 400 && finite(player.lastHits) && player.lastHits < 100) {
+    return { position: 'hard-support', certainty: 'medium', evidence: ['support-item-purchases', 'low-farm'] };
+  }
+
   const roles = hero?.roles || [];
   if (roles.length === 1 && roles[0] === 'Support') return { position: 'soft-support', certainty: 'medium', evidence: ['hero-role:support'] };
   if (roles.includes('Carry') && !roles.includes('Support') && finite(player?.gpm)) return { position: 'safe-core', certainty: 'medium', evidence: ['hero-role:carry'] };

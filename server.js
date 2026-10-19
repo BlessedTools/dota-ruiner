@@ -11,7 +11,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MATCH_PATH = /^\/api\/matches\/(\d{7,12})$/;
 const LOCAL_ORIGIN = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
 const SECURITY_HEADERS = {
-  'Content-Security-Policy': "default-src 'self'; connect-src 'self' https://api.opendota.com; img-src 'self' data: https://cdn.cloudflare.steamstatic.com; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  'Content-Security-Policy': "default-src 'self'; connect-src 'self' https://api.opendota.com; img-src 'self' data: https://cdn.cloudflare.steamstatic.com; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
   'Referrer-Policy': 'no-referrer',
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',

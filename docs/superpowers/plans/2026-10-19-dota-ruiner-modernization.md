@@ -56,7 +56,7 @@
 
 - [ ] **Step 2: Run the test and verify RED**
 
-  Run: `npm test -- tests/unit/smoke.test.js`  
+  Run: `npm test -- tests/unit/smoke.test.js`
   Expected: FAIL because the package/test configuration or module does not exist.
 
 - [ ] **Step 3: Add the package and tool configuration**
@@ -69,7 +69,7 @@
 
 - [ ] **Step 5: Install dependencies and verify GREEN**
 
-  Run: `npm install` then `npm test -- tests/unit/smoke.test.js`  
+  Run: `npm install` then `npm test -- tests/unit/smoke.test.js`
   Expected: PASS with a committed lockfile and no warnings from project configuration.
 
 - [ ] **Step 6: Commit**
@@ -102,7 +102,7 @@
 
 - [ ] **Step 2: Run tests and verify RED**
 
-  Run: `npm test -- tests/unit/normalize-match.test.js`  
+  Run: `npm test -- tests/unit/normalize-match.test.js`
   Expected: FAIL because `normalizeMatch` is missing.
 
 - [ ] **Step 3: Implement the normalized data boundary**
@@ -111,7 +111,7 @@
 
 - [ ] **Step 4: Verify normalization GREEN**
 
-  Run: `npm test -- tests/unit/normalize-match.test.js`  
+  Run: `npm test -- tests/unit/normalize-match.test.js`
   Expected: PASS for standard, partial, and unusual compositions.
 
 - [ ] **Step 5: Write failing demo-isolation tests**
@@ -120,7 +120,7 @@
 
 - [ ] **Step 6: Implement the immutable demo module and verify GREEN**
 
-  Run: `npm test -- tests/unit/demo-match.test.js`  
+  Run: `npm test -- tests/unit/demo-match.test.js`
   Expected: PASS; demo creation never mutates or aliases caller data.
 
 - [ ] **Step 7: Commit**
@@ -156,7 +156,7 @@
 
 - [ ] **Step 2: Verify RED, implement minimal utilities, and verify GREEN**
 
-  Run before and after: `npm test -- tests/unit/score-utils.test.js`  
+  Run before and after: `npm test -- tests/unit/score-utils.test.js`
   Expected RED: missing exports. Expected GREEN: all normalization cases pass.
 
 - [ ] **Step 3: Write failing five-position role tests**
@@ -165,7 +165,7 @@
 
 - [ ] **Step 4: Implement role inference and verify GREEN**
 
-  Run: `npm test -- tests/unit/roles.test.js`  
+  Run: `npm test -- tests/unit/roles.test.js`
   Expected: PASS with categorical certainty and inspectable evidence.
 
 - [ ] **Step 5: Write failing Ruin and Impact v2 tests**
@@ -174,7 +174,7 @@
 
 - [ ] **Step 6: Implement config-driven scoring and verify GREEN**
 
-  Run: `npm test -- tests/unit/scoring.test.js`  
+  Run: `npm test -- tests/unit/scoring.test.js`
   Expected: PASS across Ranked, Turbo, partial, zero-kill, and abandon fixtures.
 
 - [ ] **Step 7: Write failing conclusion-quality and recommendation tests**
@@ -183,7 +183,7 @@
 
 - [ ] **Step 8: Implement quality assessment and recommendations, then run the domain suite**
 
-  Run: `npm test -- tests/unit/score-utils.test.js tests/unit/roles.test.js tests/unit/scoring.test.js tests/unit/confidence.test.js tests/unit/recommendations.test.js`  
+  Run: `npm test -- tests/unit/score-utils.test.js tests/unit/roles.test.js tests/unit/scoring.test.js tests/unit/confidence.test.js tests/unit/recommendations.test.js`
   Expected: PASS with no snapshots hiding numeric assertions.
 
 - [ ] **Step 9: Commit**
@@ -211,7 +211,7 @@
 
 - [ ] **Step 2: Implement parsing and fetch adapter, then verify GREEN**
 
-  Run: `npm test -- tests/unit/api-client.test.js`  
+  Run: `npm test -- tests/unit/api-client.test.js`
   Expected: PASS; outbound browser URLs contain no `api_key`.
 
 - [ ] **Step 3: Write failing overlapping-request tests**
@@ -220,7 +220,7 @@
 
 - [ ] **Step 4: Implement AbortController/token coordination and verify GREEN**
 
-  Run: `npm test -- tests/unit/request-coordinator.test.js`  
+  Run: `npm test -- tests/unit/request-coordinator.test.js`
   Expected: PASS for abort-aware and abort-ignoring fetch implementations.
 
 - [ ] **Step 5: Commit**
@@ -256,7 +256,7 @@
 
 - [ ] **Step 2: Implement hero/i18n modules and verify GREEN**
 
-  Run: `npm test -- tests/unit/heroes.test.js tests/unit/i18n.test.js`  
+  Run: `npm test -- tests/unit/heroes.test.js tests/unit/i18n.test.js`
   Expected: PASS without relying on network access.
 
 - [ ] **Step 3: Write failing safe-render and accessibility structure tests**
@@ -269,7 +269,7 @@
 
 - [ ] **Step 5: Verify render GREEN and production build**
 
-  Run: `npm test -- tests/unit/render.test.js` then `npm run build`  
+  Run: `npm test -- tests/unit/render.test.js` then `npm run build`
   Expected: PASS and a static `dist` with no inline application script or stylesheet monolith.
 
 - [ ] **Step 6: Commit**
@@ -298,7 +298,7 @@
 
 - [ ] **Step 2: Implement chart data functions and verify GREEN**
 
-  Run: `npm test -- tests/unit/chart.test.js`  
+  Run: `npm test -- tests/unit/chart.test.js`
   Expected: PASS with no synthetic interpolation or `GPM × time` logic.
 
 - [ ] **Step 3: Write failing browser chart tests**
@@ -311,7 +311,7 @@
 
 - [ ] **Step 5: Verify chart browser flow**
 
-  Run: `npm run test:e2e -- tests/e2e/chart.spec.js`  
+  Run: `npm run test:e2e -- tests/e2e/chart.spec.js`
   Expected: PASS at desktop and mobile projects.
 
 - [ ] **Step 6: Commit**
@@ -345,7 +345,7 @@
 
 - [ ] **Step 2: Implement bounded history and verify GREEN**
 
-  Run: `npm test -- tests/unit/history.test.js`  
+  Run: `npm test -- tests/unit/history.test.js`
   Expected: PASS even when storage throws on read or write.
 
 - [ ] **Step 3: Write failing comparison tests**
@@ -354,7 +354,7 @@
 
 - [ ] **Step 4: Implement comparison view model/UI and verify GREEN**
 
-  Run: `npm test -- tests/unit/comparison.test.js`  
+  Run: `npm test -- tests/unit/comparison.test.js`
   Expected: PASS with localized labels supplied by the caller.
 
 - [ ] **Step 5: Write failing PNG export tests**
@@ -363,7 +363,7 @@
 
 - [ ] **Step 6: Implement export and verify unit/browser GREEN**
 
-  Run: `npm test -- tests/unit/share-card.test.js` then `npm run test:e2e -- tests/e2e/history-share.spec.js`  
+  Run: `npm test -- tests/unit/share-card.test.js` then `npm run test:e2e -- tests/e2e/history-share.spec.js`
   Expected: PASS for history reopen, comparison, locale persistence, PNG download, and hostile names.
 
 - [ ] **Step 7: Commit**
@@ -400,7 +400,7 @@
 
 - [ ] **Step 3: Verify PWA GREEN**
 
-  Run: `npm run build` then `npm run test:e2e -- tests/e2e/pwa.spec.js`  
+  Run: `npm run build` then `npm run test:e2e -- tests/e2e/pwa.spec.js`
   Expected: PASS in Chromium with network disabled after initial installation.
 
 - [ ] **Step 4: Commit**
@@ -432,7 +432,7 @@
 
 - [ ] **Step 2: Implement cache/limiter modules and verify GREEN**
 
-  Run: `npm test -- tests/unit/server-cache.test.js tests/unit/server-limiter.test.js`  
+  Run: `npm test -- tests/unit/server-cache.test.js tests/unit/server-limiter.test.js`
   Expected: PASS without real timers or network.
 
 - [ ] **Step 3: Write failing server integration tests**
@@ -443,12 +443,12 @@
 
   Read the optional key once from the environment, keep it out of returned errors/logs, use an Authorization header where supported and a redacted server-only upstream query fallback where required. Do not accept browser-supplied keys.
 
-  Run: `npm test -- tests/unit/server.test.js`  
+  Run: `npm test -- tests/unit/server.test.js`
   Expected: PASS using ephemeral loopback ports and injected upstream responses.
 
 - [ ] **Step 5: Verify the production-like local flow**
 
-  Run: `npm run build`, start `npm start`, request `/`, a valid mocked/API route when configured, `.env`, `.git/config`, traversal encodings, POST, and HEAD.  
+  Run: `npm run build`, start `npm start`, request `/`, a valid mocked/API route when configured, `.env`, `.git/config`, traversal encodings, POST, and HEAD.
   Expected: shell/HEAD succeed; sensitive paths, traversal, and unsupported methods are rejected; logs contain no secret.
 
 - [ ] **Step 6: Commit**
@@ -482,14 +482,14 @@
 
 - [ ] **Step 2: Run the critical flow and verify RED**
 
-  Run: `npm run test:e2e -- tests/e2e/analysis.spec.js`  
+  Run: `npm run test:e2e -- tests/e2e/analysis.spec.js`
   Expected: at least the not-yet-integrated end-to-end behaviors fail for the intended reason.
 
 - [ ] **Step 3: Complete main-entry integration and verify GREEN**
 
   Wire API, normalization, scoring, rendering, charts, history, comparison, export, locale, URL hash, and request coordinator. Fix integration defects without weakening assertions.
 
-  Run: `npm run test:e2e -- tests/e2e/analysis.spec.js`  
+  Run: `npm run test:e2e -- tests/e2e/analysis.spec.js`
   Expected: PASS in desktop and mobile projects.
 
 - [ ] **Step 4: Add failing axe and keyboard assertions**
@@ -498,7 +498,7 @@
 
 - [ ] **Step 5: Fix accessibility findings and verify GREEN**
 
-  Run: `npm run test:e2e -- tests/e2e/accessibility.spec.js`  
+  Run: `npm run test:e2e -- tests/e2e/accessibility.spec.js`
   Expected: no serious/critical automated violations and all keyboard assertions pass.
 
 - [ ] **Step 6: Add CI and Pages workflows**
@@ -511,7 +511,7 @@
 
 - [ ] **Step 8: Run the complete release gate**
 
-  Run: `npm run check`  
+  Run: `npm run check`
   Expected: unit suite, production build, and all Playwright projects PASS with pristine output.
 
 - [ ] **Step 9: Perform manual proportional checks**
@@ -520,7 +520,7 @@
 
 - [ ] **Step 10: Review the final diff against all 18 acceptance criteria**
 
-  Run: `git diff 1a776d6 --check`, `git status --short`, and targeted `rg` searches for old synthetic-chart logic, automatic demo fallback, `innerHTML`, browser `api_key`, and numeric confidence copy.  
+  Run: `git diff 1a776d6 --check`, `git status --short`, and targeted `rg` searches for old synthetic-chart logic, automatic demo fallback, `innerHTML`, browser `api_key`, and numeric confidence copy.
   Expected: no whitespace errors, no unintended files, and no prohibited legacy behavior.
 
 - [ ] **Step 11: Commit**

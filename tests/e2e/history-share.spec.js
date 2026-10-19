@@ -12,4 +12,8 @@ test('real analyses enter history while demo stays separate', async ({ page }) =
   await page.getByRole('button', { name: /демо|demo/i }).click();
   await expect(page.getByText(/ДЕМО|DEMO/)).toBeVisible();
   await expect(page.getByRole('button', { name: /7890123456/ })).toHaveCount(0);
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /Сохранить PNG|Save PNG/i }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('dota-ruiner-demo.png');
 });

@@ -18,6 +18,15 @@ describe('inferRole', () => {
     expect(inferRole(player({ obsPlaced: 15, senPlaced: 10, gpm: 220, lastHits: 20 }), team).position).toBe('hard-support');
   });
 
+  it('uses observed support item purchases when lane and ward totals are absent', () => {
+    const buyer = player({ gpm: 310, lastHits: 45, purchase: { ward_observer: 6, ward_sentry: 8, smoke_of_deceit: 3 } });
+    expect(inferRole(buyer, [buyer], { roles: ['Support', 'Nuker'] })).toMatchObject({
+      position: 'hard-support',
+      certainty: 'medium',
+      evidence: expect.arrayContaining(['support-item-purchases']),
+    });
+  });
+
   it('reports unknown when sparse evidence is contradictory', () => {
     const candidate = player({ gpm: null, lastHits: null });
     expect(inferRole(candidate, [candidate], { roles: ['Carry', 'Support'] })).toMatchObject({ position: 'unknown', certainty: 'unknown' });

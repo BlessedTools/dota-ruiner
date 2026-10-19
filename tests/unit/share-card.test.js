@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildShareCardLines, exportShareCard } from '../../src/ui/share-card.js';
 
-const analysis = { source: 'demo', matchId: 7890123456, dataCoverage: 76, modelVersions: { ruin: 'ruin-v2.0.0', impact: 'impact-v2.0.0' }, leaders: { ruin: { name: '<script>'.repeat(30), heroName: 'Axe', score: 64, recommendations: { weaknesses: [{ evidence: ['10 deaths'] }] } }, impact: { heroName: 'Invoker', score: 81 } } };
+const analysis = { source: 'demo', matchId: 7890123456, dataCoverage: 76, modelVersions: { ruin: 'ruin-v2.0.0', impact: 'impact-v2.0.0' }, leaders: { ruin: { name: '<script>'.repeat(30), heroName: 'Axe', ruinScore: 64, recommendations: { weaknesses: [{ evidence: ['10 deaths'] }] } }, impact: { heroName: 'Invoker', impactScore: 81 } } };
 
 describe('share card export', () => {
   it('includes demo, coverage, model and disclaimer while limiting user text', () => {
@@ -9,6 +9,8 @@ describe('share card export', () => {
     expect(lines.join(' ')).toContain('DEMO');
     expect(lines.join(' ')).toContain('76%');
     expect(lines.join(' ')).toContain('ruin-v2.0.0');
+    expect(lines.join(' ')).toContain('64');
+    expect(lines.join(' ')).toContain('81');
     expect(lines.join(' ')).toContain('heuristic');
     expect(Math.max(...lines.map((line) => line.length))).toBeLessThanOrEqual(96);
   });
