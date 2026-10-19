@@ -1,95 +1,57 @@
-function el(tag, options = {}, children = []) {
-  const node = document.createElement(tag);
-  if (options.className) node.className = options.className;
-  if (options.text !== undefined) node.textContent = String(options.text);
-  for (const [name, value] of Object.entries(options.attrs || {})) node.setAttribute(name, String(value));
-  for (const child of (Array.isArray(children) ? children : [children])) if (child) node.append(child);
-  return node;
+import { el, formatNumber, heroPortrait } from './dom.js';
+import { renderDuel } from './duel.js';
+import { renderMatchArena } from './match-arena.js';
+import { renderMatchStory } from './match-story.js';
+
+function observedFactors(player) {
+  const factors = player?.ruin?.components || [];
+  return { available: factors.filter((factor) => factor.available).length, total: factors.length };
 }
 
-function scoreCard(kind, player, i18n) {
-  const article = el('article', { className: `verdict-card verdict-card--${kind}` });
-  article.append(el('p', { className: 'verdict-card__label', text: i18n.t(`labels.${kind}`) }));
-  if (!player) {
-    article.append(el('h2', { text: i18n.t('quality.insufficient') }));
-    return article;
-  }
-
-  const score = kind === 'ruin' ? player.ruinScore : player.impactScore;
-  article.append(
-    el('h2', { text: player.name || player.heroName }),
-    el('p', { className: 'hero-name', text: player.heroName }),
-    el('strong', { className: 'score', text: `${score ?? '—'}` }),
-    el('span', { className: 'score-unit', text: kind === 'ruin' ? ' Ruin Score' : ' Impact Score' }),
-    el('p', { className: 'role', text: player.role?.position === 'unknown' ? i18n.t('labels.unknownRole') : `${player.role?.position || 'unknown'} · ${player.role?.certainty || 'unknown'}` }),
-  );
-  const evidence = el('div', { className: 'evidence-grid' });
-  for (const [label, items] of [
-    [i18n.t('labels.whatHurt'), player.recommendations?.weaknesses || []],
-    [i18n.t('labels.whatHelped'), player.recommendations?.strengths || []],
-  ]) {
-    const section = el('section', { className: 'evidence-group' }, el('h3', { text: label }));
-    const list = el('ul');
-    (items.length ? items : [{ id: 'none', evidence: ['—'] }]).forEach((item) => list.append(el('li', { text: item.evidence?.join(' · ') || item.id })));
-    section.append(list);
-    evidence.append(section);
-  }
-  article.append(evidence);
-  return article;
+function roleText(player, i18n) {
+  if (!player?.role || player.role.position === 'unknown') return i18n.t('labels.unknownRole');
+  return `${player.role.position} · ${player.role.certainty}`;
 }
 
-function playerRow(player, i18n) {
-  const item = el('li', { className: 'player-row' });
-  item.append(
-    el('span', { className: 'player-row__name', text: player.name || player.heroName }),
-    el('span', { text: player.heroName }),
-    el('span', { className: 'mono', text: `${player.kills ?? '—'}/${player.deaths ?? '—'}/${player.assists ?? '—'}` }),
-    el('span', { className: 'mono', text: `${player.ruinScore ?? '—'} R · ${player.impactScore ?? '—'} I` }),
-  );
-  if (player.role?.position === 'unknown') item.append(el('span', { className: 'tag tag--warning', text: i18n.t('labels.unknownRole') }));
-  return item;
+function playerCard(player, i18n) {
+  const factors = observedFactors(player);
+  return el('article', { className: 'player-card' }, [
+    heroPortrait(player),
+    el('div', { className: 'player-card__identity' }, [el('h3', { text: player.name || player.heroName }), el('p', { text: `${player.heroName} · ${roleText(player, i18n)}` })]),
+    el('p', { className: 'player-card__kda', text: `${player.kills ?? '—'} / ${player.deaths ?? '—'} / ${player.assists ?? '—'}` }),
+    el('div', { className: 'player-card__economy' }, [el('span', { text: `${player.gpm ?? '—'} GPM` }), el('span', { text: `${formatNumber(player.netWorth, i18n.locale)} NW` })]),
+    el('div', { className: 'player-card__scores' }, [el('span', { className: 'mini-score mini-score--ruin', text: `R ${player.ruinScore ?? '—'}` }), el('span', { className: 'mini-score mini-score--impact', text: `I ${player.impactScore ?? '—'}` })]),
+    el('p', { className: 'player-card__coverage', text: `${factors.available}/${factors.total} ${i18n.t('labels.factors')}` }),
+  ]);
+}
+
+function renderLineups(analysis, i18n) {
+  const section = el('section', { className: 'lineups', attrs: { 'aria-labelledby': 'lineups-title' } }, el('h2', { text: i18n.t('labels.players'), attrs: { id: 'lineups-title' } }));
+  const grid = el('div', { className: 'lineups__grid' });
+  for (const team of analysis.teams || []) {
+    const panel = el('section', { className: `lineup lineup--${team.id}` }, el('h3', { text: team.label }));
+    const list = el('div', { className: 'player-list' });
+    team.players.forEach((player) => list.append(playerCard(player, i18n)));
+    panel.append(list); grid.append(panel);
+  }
+  section.append(grid);
+  return section;
 }
 
 export function renderAnalysis(container, analysis, i18n) {
   const fragment = document.createDocumentFragment();
   if (analysis.source === 'demo') fragment.append(el('div', { className: 'demo-banner', text: i18n.t('demo.label'), attrs: { 'data-demo-label': '', role: 'status' } }));
-
-  const summary = el('section', { className: 'match-summary', attrs: { 'aria-label': `Match ${analysis.matchId}` } });
-  summary.append(
-    el('p', { className: 'match-id mono', text: `#${analysis.matchId}` }),
-    el('p', { text: `${analysis.mode || 'unknown'} · ${Math.floor((analysis.duration || 0) / 60)} min` }),
-    el('p', { text: `${i18n.t('labels.coverage')}: ${analysis.dataCoverage ?? 0}%` }),
-    el('p', { className: `quality quality--${analysis.quality?.quality}`, text: i18n.t(`quality.${analysis.quality?.quality || 'insufficient'}`) }),
-  );
-  fragment.append(summary);
-
-  const verdicts = el('section', { className: 'verdict-grid', attrs: { 'aria-label': 'Verdicts' } });
-  verdicts.append(
-    scoreCard('ruin', analysis.quality?.showVerdict ? analysis.leaders?.ruin : null, i18n),
-    scoreCard('impact', analysis.quality?.showVerdict ? analysis.leaders?.impact : null, i18n),
-  );
-  fragment.append(verdicts);
-
+  fragment.append(renderMatchArena(analysis, i18n), renderDuel(analysis, i18n), renderMatchStory(analysis, i18n));
+  fragment.append(el('section', { className: 'chart-panel', attrs: { 'data-chart-host': '', 'aria-label': i18n.t('chart.timeline') } }));
+  fragment.append(renderLineups(analysis, i18n));
   if (analysis.warnings?.length) {
     const warnings = el('section', { className: 'warnings' }, el('h2', { text: i18n.t('labels.warnings') }));
     const list = el('ul');
-    analysis.warnings.forEach((warning) => {
-      const localized = i18n.t(`warnings.${warning}`);
-      list.append(el('li', { text: localized === `warnings.${warning}` ? warning : localized }));
-    });
-    warnings.append(list);
-    fragment.append(warnings);
+    analysis.warnings.forEach((warning) => { const localized = i18n.t(`warnings.${warning}`); list.append(el('li', { text: localized === `warnings.${warning}` ? warning : localized })); });
+    warnings.append(list); fragment.append(warnings);
   }
-
-  fragment.append(el('section', { className: 'chart-panel', attrs: { 'data-chart-host': '', 'aria-label': 'Match timeline' } }));
-  const teams = el('section', { className: 'teams', attrs: { 'aria-label': i18n.t('labels.players') } });
-  for (const team of analysis.teams || []) {
-    const panel = el('section', { className: `team-panel team-panel--${team.id}` }, el('h2', { text: team.label }));
-    const list = el('ul', { className: 'player-list' });
-    team.players.forEach((player) => list.append(playerRow(player, i18n)));
-    panel.append(list);
-    teams.append(panel);
-  }
-  fragment.append(teams, el('p', { className: 'disclaimer', text: i18n.t('disclaimer') }));
+  const method = el('details', { className: 'methodology' });
+  method.append(el('summary', { text: i18n.t('labels.methodology') }), el('p', { text: i18n.t('disclaimer') }), el('p', { text: `${i18n.t('labels.model')}: ${analysis.modelVersions?.ruin || '—'} / ${analysis.modelVersions?.impact || '—'}` }));
+  fragment.append(method);
   container.replaceChildren(fragment);
 }
