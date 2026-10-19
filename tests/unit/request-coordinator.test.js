@@ -16,6 +16,20 @@ describe('request coordinator', () => {
     expect(updates).toEqual(['second:new']);
   });
 
+  it('never lets a stale enriched analysis replace the latest view model', async () => {
+    const pending = [];
+    const rendered = [];
+    const coordinator = createRequestCoordinator();
+    const task = () => new Promise((resolve) => pending.push(resolve));
+    const first = coordinator.run(task, { onSuccess: (analysis) => rendered.push(analysis) });
+    const second = coordinator.run(task, { onSuccess: (analysis) => rendered.push(analysis) });
+    pending[1]({ matchId: 2, narrative: { lead: 'latest' }, teams: [] });
+    await second;
+    pending[0]({ matchId: 1, narrative: { lead: 'stale' }, teams: [] });
+    await first;
+    expect(rendered).toEqual([{ matchId: 2, narrative: { lead: 'latest' }, teams: [] }]);
+  });
+
   it('cancels the active signal without surfacing a stale error', async () => {
     const coordinator = createRequestCoordinator();
     let observedSignal;

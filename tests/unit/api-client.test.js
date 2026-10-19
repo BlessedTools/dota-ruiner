@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError, fetchMatch, parseMatchInput } from '../../src/api/opendota.js';
+import { ApiError, fetchConstant, fetchMatch, parseMatchInput } from '../../src/api/opendota.js';
 
 describe('OpenDota client', () => {
   it.each([
@@ -30,5 +30,13 @@ describe('OpenDota client', () => {
     const fetchImpl = vi.fn().mockResolvedValue(new Response('{broken', { status: 200 }));
     await expect(fetchMatch('9000000001', { fetchImpl, isLocal: false, timeoutMs: 100 })).rejects.toEqual(expect.objectContaining({ code: 'invalid-response' }));
     expect(ApiError).toBeTypeOf('function');
+  });
+
+  it('fetches only allowlisted public constants without an api key', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(JSON.stringify({ 1: { id: 1 } }), { status: 200 }));
+    await expect(fetchConstant('heroes', { fetchImpl, timeoutMs: 100 })).resolves.toEqual({ 1: { id: 1 } });
+    expect(fetchImpl.mock.calls[0][0]).toBe('https://api.opendota.com/api/constants/heroes');
+    expect(fetchImpl.mock.calls[0][0]).not.toContain('api_key');
+    await expect(fetchConstant('../players', { fetchImpl })).rejects.toMatchObject({ code: 'invalid-constant' });
   });
 });

@@ -3,15 +3,11 @@ import './styles/accessibility.css';
 import { fetchMatch, parseMatchInput } from './api/opendota.js';
 import { createRequestCoordinator } from './api/client.js';
 import { normalizeMatch } from './domain/normalize-match.js';
-import { inferRole } from './domain/roles.js';
-import { calculateRuinScore } from './domain/ruin-score.js';
-import { calculateImpactScore } from './domain/impact-score.js';
-import { assessConclusionQuality } from './domain/confidence.js';
-import { buildRecommendations } from './domain/recommendations.js';
+import { buildAnalysis } from './domain/analysis.js';
 import { createDemoAnalysisInput } from './data/demo-match.js';
-import { MODEL_VERSIONS } from './data/scoring-config.js';
 import { createI18n } from './data/i18n.js';
-import { getHero, loadHeroConstants } from './data/heroes.js';
+import { getHero } from './data/heroes.js';
+import { fetchConstants, getConstantHero } from './data/match-constants.js';
 import { createHistoryStore } from './storage/history.js';
 import { compareAnalyses, renderComparison } from './ui/comparison.js';
 import { createMatchChart } from './ui/chart.js';
@@ -36,7 +32,8 @@ const elements = {
 const i18n = createI18n(null);
 const coordinator = createRequestCoordinator();
 const historyStore = createHistoryStore();
-const heroConstantsReady = loadHeroConstants().catch(() => null);
+let currentConstants = null;
+const constantsReady = fetchConstants().then((constants) => { currentConstants = constants; return constants; }).catch(() => null);
 let chart = null;
 let currentAnalysis = null;
 let submissionSequence = 0;
@@ -46,65 +43,6 @@ function chartLabels() {
     timeline: i18n.t('chart.timeline'), metric: i18n.t('chart.metric'), data: i18n.t('chart.data'),
     minute: i18n.t('chart.minute'), minuteHeading: i18n.t('chart.minuteHeading'), observed: i18n.t('chart.observed'),
     scrollable: i18n.t('chart.scrollable'), unavailable: i18n.t('chart.unavailable'), noValues: i18n.t('chart.noValues'),
-  };
-}
-
-function playerView(player, match, team) {
-  const hero = getHero(player.heroId);
-  const role = inferRole(player, team, hero);
-  const context = { player, team, match, role };
-  const ruin = calculateRuinScore(context);
-  const impact = calculateImpactScore(context);
-  return {
-    slot: player.slot,
-    name: player.personaname,
-    heroName: hero.name,
-    heroId: hero.id,
-    heroImage: hero.image,
-    kills: player.kills,
-    deaths: player.deaths,
-    assists: player.assists,
-    role,
-    ruinScore: ruin.score,
-    impactScore: impact.score,
-    ruin,
-    impact,
-    recommendations: buildRecommendations(ruin),
-  };
-}
-
-export function analyzeNormalizedMatch(match, warnings = []) {
-  const radiant = match.players.filter((player) => player.team === 'radiant');
-  const dire = match.players.filter((player) => player.team === 'dire');
-  const players = [
-    ...radiant.map((player) => playerView(player, match, radiant)),
-    ...dire.map((player) => playerView(player, match, dire)),
-  ];
-  const ruinSorted = [...players].filter((player) => player.ruinScore !== null).sort((a, b) => b.ruinScore - a.ruinScore || a.slot - b.slot);
-  const impactSorted = [...players].filter((player) => player.impactScore !== null).sort((a, b) => b.impactScore - a.impactScore || a.slot - b.slot);
-  const ruinLeader = ruinSorted[0] || null;
-  const coverage = ruinLeader?.ruin.dataCoverage ?? 0;
-  const quality = assessConclusionQuality({
-    dataCoverage: coverage,
-    roleCertainty: ruinLeader?.role.certainty,
-    leadGap: ruinLeader && ruinSorted[1] ? ruinLeader.ruinScore - ruinSorted[1].ruinScore : 100,
-  });
-  return {
-    source: match.source,
-    matchId: match.matchId,
-    duration: match.duration,
-    startTime: match.startTime,
-    mode: match.mode,
-    warnings,
-    quality,
-    dataCoverage: coverage,
-    modelVersions: MODEL_VERSIONS,
-    leaders: { ruin: ruinLeader, impact: impactSorted[0] || null },
-    teams: [
-      { id: 'radiant', label: 'Radiant', players: players.filter((player) => radiant.some((item) => item.slot === player.slot)) },
-      { id: 'dire', label: 'Dire', players: players.filter((player) => dire.some((item) => item.slot === player.slot)) },
-    ],
-    match,
   };
 }
 
@@ -118,7 +56,7 @@ function displayAnalysis(analysis, { persist = false } = {}) {
   renderAnalysis(elements.results, analysis, i18n);
   chart = createMatchChart(elements.results.querySelector('[data-chart-host]'), {
     match: chartMatch(analysis),
-    getHeroName: (id) => getHero(id).name,
+    getHeroName: (id) => currentConstants?.heroes?.has(Number(id)) ? getConstantHero(currentConstants, id).name : getHero(id).name,
     leaders: { ruinSlot: analysis.leaders?.ruin?.slot, impactSlot: analysis.leaders?.impact?.slot },
     labels: chartLabels(),
   });
@@ -134,7 +72,7 @@ function showNormalized(result, { persist = false } = {}) {
     renderError(elements.status, 'invalid-response', i18n);
     return null;
   }
-  return displayAnalysis(analyzeNormalizedMatch(result.match, result.warnings), { persist });
+  return displayAnalysis(buildAnalysis(result.match, currentConstants, i18n.locale, result.warnings), { persist });
 }
 
 function renderHistory() {
@@ -204,7 +142,7 @@ elements.form.addEventListener('submit', (event) => {
   const submission = ++submissionSequence;
   coordinator.run(async (signal) => {
     const raw = await fetchMatch(parsed.matchId, { signal });
-    await heroConstantsReady;
+    await constantsReady;
     return raw;
   }, {
     onSuccess(raw) {

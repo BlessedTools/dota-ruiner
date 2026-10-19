@@ -1,5 +1,6 @@
 const MATCH_ID = /^\d{7,12}$/;
 const ALLOWED_HOSTS = new Set(['opendota.com', 'www.opendota.com', 'dotabuff.com', 'www.dotabuff.com']);
+const ALLOWED_CONSTANTS = new Set(['heroes', 'items', 'game_mode', 'lobby_type', 'region', 'patch']);
 
 export class ApiError extends Error {
   constructor(code, message = code, details = {}) {
@@ -30,7 +31,7 @@ function errorForStatus(status) {
   return new ApiError('upstream-error', `OpenDota HTTP ${status}`, { status });
 }
 
-async function requestJson(url, { fetchImpl, timeoutMs, signal }) {
+async function requestJson(url, { fetchImpl, timeoutMs, signal, validate }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort('timeout'), timeoutMs);
   const onAbort = () => controller.abort(signal.reason);
@@ -44,7 +45,7 @@ async function requestJson(url, { fetchImpl, timeoutMs, signal }) {
     } catch {
       throw new ApiError('invalid-response', 'OpenDota returned invalid JSON');
     }
-    if (!data || typeof data !== 'object' || !Array.isArray(data.players)) throw new ApiError('invalid-response', 'OpenDota response has no players');
+    if (!data || typeof data !== 'object' || (validate && !validate(data))) throw new ApiError('invalid-response', 'OpenDota response has an unexpected shape');
     return data;
   } catch (error) {
     if (error instanceof ApiError) throw error;
@@ -69,11 +70,21 @@ export async function fetchMatch(matchId, options = {}) {
   let lastError;
   for (const url of urls) {
     try {
-      return await requestJson(url, { fetchImpl, timeoutMs: options.timeoutMs ?? 8000, signal: options.signal });
+      return await requestJson(url, { fetchImpl, timeoutMs: options.timeoutMs ?? 8000, signal: options.signal, validate: (data) => Array.isArray(data.players) });
     } catch (error) {
       lastError = error;
       if (error.code === 'cancelled' || error.code === 'invalid-response' || !isLocal) break;
     }
   }
   throw lastError || new ApiError('network');
+}
+
+export async function fetchConstant(name, options = {}) {
+  if (!ALLOWED_CONSTANTS.has(name)) throw new ApiError('invalid-constant', 'Unsupported OpenDota constant');
+  return requestJson(`https://api.opendota.com/api/constants/${name}`, {
+    fetchImpl: options.fetchImpl || globalThis.fetch,
+    timeoutMs: options.timeoutMs ?? 5000,
+    signal: options.signal,
+    validate: (data) => Array.isArray(data) || (data && typeof data === 'object'),
+  });
 }
