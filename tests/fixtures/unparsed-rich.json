@@ -1,0 +1,52 @@
+{
+  "match_id": 9048925949,
+  "duration": 1924,
+  "start_time": 1792230121,
+  "radiant_win": false,
+  "radiant_score": 18,
+  "dire_score": 33,
+  "game_mode": 22,
+  "lobby_type": 7,
+  "patch": 60,
+  "region": 8,
+  "players": [
+    {
+      "player_slot": 0,
+      "account_id": 1,
+      "hero_id": 15,
+      "personaname": "Razor player",
+      "kills": 3,
+      "deaths": 9,
+      "assists": 2,
+      "gold_per_min": 273,
+      "xp_per_min": 380,
+      "last_hits": 121,
+      "denies": 4,
+      "level": 14,
+      "hero_damage": 12729,
+      "tower_damage": 0,
+      "net_worth": 14321,
+      "item_0": 1,
+      "benchmarks": { "gold_per_min": { "raw": 273, "pct": 0.12 } }
+    },
+    {
+      "player_slot": 128,
+      "account_id": 2,
+      "hero_id": 1,
+      "personaname": "Anti-Mage player",
+      "kills": 9,
+      "deaths": 1,
+      "assists": 10,
+      "gold_per_min": 815,
+      "xp_per_min": 800,
+      "last_hits": 407,
+      "denies": 12,
+      "level": 24,
+      "hero_damage": 25801,
+      "tower_damage": 13552,
+      "net_worth": 30054,
+      "item_0": 2,
+      "benchmarks": { "gold_per_min": { "raw": 815, "pct": 0.98 } }
+    }
+  ]
+}
