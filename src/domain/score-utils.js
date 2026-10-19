@@ -12,6 +12,6 @@ export function normalizeScore(components) {
   };
 }
 
-export function component(id, maxPoints, available, points, observed, expected, evidence = []) {
-  return { id, labelKey: `score.${id}`, observed, expected, points: available ? clamp(Math.round(points), 0, maxPoints) : 0, maxPoints, available, evidence };
+export function component(id, maxPoints, available, points, observed, source, evidence = []) {
+  return { id, labelKey: `score.${id}`, observed, source, points: available ? clamp(Math.round(points), 0, maxPoints) : 0, maxPoints, available, evidence };
 }

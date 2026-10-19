@@ -1,42 +1,56 @@
-import { BENCHMARKS, MODEL_VERSIONS, SCORE_WEIGHTS } from '../data/scoring-config.js';
-import { component, normalizeScore } from './score-utils.js';
+import { MODEL_VERSIONS, SCORE_WEIGHTS } from '../data/scoring-config.js';
+import { clamp, component, normalizeScore } from './score-utils.js';
 
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
+const percentile = (player, key) => {
+  const value = player?.benchmarks?.[key]?.percentile;
+  return finite(value) ? clamp(value, 0, 1) : null;
+};
+const average = (values) => {
+  const observed = values.filter(finite);
+  return observed.length ? observed.reduce((sum, value) => sum + value, 0) / observed.length : null;
+};
+
+function participationFor(player, team) {
+  if (finite(player.teamfightParticipation)) return clamp(player.teamfightParticipation, 0, 1);
+  const teamKills = team.reduce((sum, item) => sum + (finite(item.kills) ? item.kills : 0), 0);
+  if (!teamKills || !finite(player.kills) || !finite(player.assists)) return null;
+  return clamp((player.kills + player.assists) / teamKills, 0, 1);
+}
+
+function supportDuty(player, team) {
+  if (![player.obsPlaced, player.senPlaced].some(finite)) return null;
+  const value = (finite(player.obsPlaced) ? player.obsPlaced : 0) + (finite(player.senPlaced) ? player.senPlaced : 0);
+  const total = team.reduce((sum, item) => sum + (finite(item.obsPlaced) ? item.obsPlaced : 0) + (finite(item.senPlaced) ? item.senPlaced : 0), 0);
+  return total > 0 ? clamp(value / total * 2, 0, 1) : null;
+}
 
 export function calculateImpactScore({ player, team, match, role }) {
   const weights = SCORE_WEIGHTS.impact;
-  const profile = match.mode === 'turbo' ? 'turbo' : match.mode === 'ranked' || match.mode === 'standard' ? 'standard' : 'generic';
-  const expected = BENCHMARKS[profile][role?.position || 'unknown'] || BENCHMARKS[profile].unknown;
-  const minutes = match.duration / 60;
-  const teamKills = team.reduce((sum, item) => sum + (finite(item.kills) ? item.kills : 0), 0);
-  const participationAvailable = teamKills > 0 && finite(player.kills) && finite(player.assists);
-  const participation = participationAvailable ? (player.kills + player.assists) / teamKills : null;
-  const dpm = finite(player.heroDamage) ? player.heroDamage / minutes : null;
-  const utility = [player.stuns, player.heroHealing].filter(finite).reduce((sum, value) => sum + value, 0);
-  const contributionAvailable = finite(dpm) || [player.stuns, player.heroHealing].some(finite);
-  const contributionRatio = Math.min(1, ((dpm || 0) / expected.dpm) * 0.8 + Math.min(0.2, utility / 10000));
-  const economyAvailable = finite(player.gpm);
-  const economyRatio = economyAvailable ? Math.min(1, player.gpm / expected.gpm) : 0;
-  const objectivesAvailable = finite(player.towerDamage);
-  const objectiveRatio = objectivesAvailable ? Math.min(1, player.towerDamage / 2500) : 0;
-  const isSupport = role?.position === 'soft-support' || role?.position === 'hard-support';
-  const dutiesObserved = isSupport
-    ? [player.obsPlaced, player.senPlaced, player.campsStacked, player.heroHealing].some(finite)
-    : finite(player.lastHits) || finite(player.towerDamage);
-  const dutiesRatio = isSupport
-    ? Math.min(1, ((player.obsPlaced || 0) + (player.senPlaced || 0) * 0.5 + (player.campsStacked || 0) + (player.heroHealing || 0) / 1000) / 20)
-    : Math.min(1, ((player.lastHits || 0) / Math.max(1, minutes * expected.lhpm) + objectiveRatio) / 2);
-  const survivalAvailable = finite(player.deaths);
-  const survivalRatio = survivalAvailable ? Math.max(0, 1 - (player.deaths / minutes) / 0.3) : 0;
+  const participation = participationFor(player, team);
+  const healingPct = player?.benchmarks?.hero_healing_per_min?.raw > 0 ? percentile(player, 'hero_healing_per_min') : null;
+  const contributionPct = average([
+    percentile(player, 'hero_damage_per_min'),
+    percentile(player, 'kills_per_min'),
+    percentile(player, 'assists_per_min'),
+    healingPct,
+  ]);
+  const economyPct = average([percentile(player, 'gold_per_min'), percentile(player, 'xp_per_min')]);
+  const objectivePct = percentile(player, 'tower_damage');
+  const roleCertain = role?.certainty !== 'low' && role?.position !== 'unknown';
+  const isSupport = roleCertain && (role?.position === 'soft-support' || role?.position === 'hard-support');
+  const dutiesPct = !roleCertain ? null : isSupport ? supportDuty(player, team) : percentile(player, 'last_hits_per_min');
+  const deathPct = percentile(player, 'deaths_per_min');
 
   const components = [
-    component('participation', weights.participation, participationAvailable, weights.participation * Math.min(1, participation / 0.65), participation, 0.65, participationAvailable ? [`${Math.round(participation * 100)}% participation`] : []),
-    component('contribution', weights.contribution, contributionAvailable, weights.contribution * contributionRatio, { dpm, utility }, expected.dpm, contributionAvailable ? [`${Math.round(dpm || 0)} DPM`] : []),
-    component('economy', weights.economy, economyAvailable, weights.economy * economyRatio, player.gpm, expected.gpm, economyAvailable ? [`${player.gpm} GPM`] : []),
-    component('objectives', weights.objectives, objectivesAvailable, weights.objectives * objectiveRatio, player.towerDamage, 2500, objectivesAvailable ? [`${player.towerDamage} tower damage`] : []),
-    component('role-duties', weights['role-duties'], dutiesObserved, weights['role-duties'] * dutiesRatio, null, null, dutiesObserved ? ['role contribution observed'] : []),
-    component('survival', weights.survival, survivalAvailable, weights.survival * survivalRatio, player.deaths, 'duration adjusted', survivalAvailable ? [`${player.deaths} deaths`] : []),
+    component('participation', weights.participation, finite(participation), weights.participation * participation, participation, 'match.teamfight_participation', finite(participation) ? [{ participation }] : []),
+    component('contribution', weights.contribution, finite(contributionPct), weights.contribution * contributionPct, contributionPct, 'opendota.benchmarks.contribution', finite(contributionPct) ? [{ percentile: contributionPct, heroDamage: player.heroDamage ?? null, heroHealing: player.heroHealing ?? null }] : []),
+    component('economy', weights.economy, finite(economyPct), weights.economy * economyPct, economyPct, 'opendota.benchmarks.economy', finite(economyPct) ? [{ percentile: economyPct, gpm: player.gpm ?? null, xpm: player.xpm ?? null }] : []),
+    component('objectives', weights.objectives, finite(objectivePct), weights.objectives * objectivePct, objectivePct, 'opendota.benchmarks.tower_damage', finite(objectivePct) ? [{ percentile: objectivePct, towerDamage: player.towerDamage ?? null }] : []),
+    component('role-duties', weights['role-duties'], finite(dutiesPct), weights['role-duties'] * dutiesPct, dutiesPct, isSupport ? 'match.team_vision_share' : 'opendota.benchmarks.last_hits_per_min', finite(dutiesPct) ? [isSupport ? { share: dutiesPct / 2, obsPlaced: player.obsPlaced ?? null, senPlaced: player.senPlaced ?? null } : { percentile: dutiesPct, lastHits: player.lastHits ?? null }] : []),
+    component('survival', weights.survival, finite(deathPct), weights.survival * deathPct, deathPct, 'opendota.benchmarks.deaths_per_min', finite(deathPct) ? [{ percentile: deathPct, deaths: player.deaths ?? null }] : []),
   ];
   const normalized = normalizeScore(components);
+  const profile = match.mode === 'turbo' ? 'turbo' : match.mode === 'ranked' || match.mode === 'standard' ? 'standard' : 'generic';
   return { ...normalized, components, flags: [], role, profile, modelVersion: MODEL_VERSIONS.impact };
 }

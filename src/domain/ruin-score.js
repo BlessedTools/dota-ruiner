@@ -1,8 +1,53 @@
-import { BENCHMARKS, MODEL_VERSIONS, SCORE_WEIGHTS } from '../data/scoring-config.js';
-import { component, normalizeScore } from './score-utils.js';
+import { MODEL_VERSIONS, SCORE_WEIGHTS } from '../data/scoring-config.js';
+import { clamp, component, normalizeScore } from './score-utils.js';
 
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
-const ratioDeficit = (observed, expected) => Math.max(0, (expected - observed) / expected);
+const percentile = (player, key) => {
+  const value = player?.benchmarks?.[key]?.percentile;
+  return finite(value) ? clamp(value, 0, 1) : null;
+};
+const average = (values) => {
+  const observed = values.filter(finite);
+  return observed.length ? observed.reduce((sum, value) => sum + value, 0) / observed.length : null;
+};
+
+function participationFor(player, team) {
+  if (finite(player.teamfightParticipation)) return clamp(player.teamfightParticipation, 0, 1);
+  const teamKills = team.reduce((sum, item) => sum + (finite(item.kills) ? item.kills : 0), 0);
+  if (!teamKills || !finite(player.kills) || !finite(player.assists)) return null;
+  return clamp((player.kills + player.assists) / teamKills, 0, 1);
+}
+
+function visionShare(player, team) {
+  if (![player.obsPlaced, player.senPlaced].some(finite)) return null;
+  const value = (finite(player.obsPlaced) ? player.obsPlaced : 0) + (finite(player.senPlaced) ? player.senPlaced : 0);
+  const total = team.reduce((sum, item) => sum + (finite(item.obsPlaced) ? item.obsPlaced : 0) + (finite(item.senPlaced) ? item.senPlaced : 0), 0);
+  return total > 0 ? value / total : null;
+}
+
+function networthAt(team, minute) {
+  const values = team.map((player) => player.networth_t?.[minute]);
+  return values.every(finite) ? values.reduce((sum, value) => sum + value, 0) : null;
+}
+
+function throwEvidence(player, match) {
+  if (!Array.isArray(player.deathsLog)) return { available: false, ratio: 0, evidence: [] };
+  const own = match.players.filter((item) => item.team === player.team);
+  const enemy = match.players.filter((item) => item.team !== player.team);
+  if (![...own, ...enemy].every((item) => Array.isArray(item.networth_t))) return { available: false, ratio: 0, evidence: [] };
+  const late = player.deathsLog.filter((event) => event.time >= 1800);
+  const throws = late.filter((event) => {
+    const minute = Math.floor(event.time / 60);
+    const ownWorth = networthAt(own, minute);
+    const enemyWorth = networthAt(enemy, minute);
+    return finite(ownWorth) && finite(enemyWorth) && ownWorth > enemyWorth;
+  });
+  return {
+    available: true,
+    ratio: late.length ? throws.length / late.length : 0,
+    evidence: [{ lateDeaths: late.length, observedLeadDeaths: throws.length }],
+  };
+}
 
 function profileFor(match) {
   if (match.mode === 'turbo') return 'turbo';
@@ -12,45 +57,29 @@ function profileFor(match) {
 
 export function calculateRuinScore({ player, team, match, role }) {
   const weights = SCORE_WEIGHTS.ruin;
-  const profile = profileFor(match);
-  const expected = BENCHMARKS[profile][role?.position || 'unknown'] || BENCHMARKS[profile].unknown;
-  const minutes = match.duration / 60;
-  const teamKills = team.reduce((sum, item) => sum + (finite(item.kills) ? item.kills : 0), 0);
-  const averageDeaths = team.filter((item) => finite(item.deaths)).reduce((sum, item) => sum + item.deaths, 0) / Math.max(1, team.filter((item) => finite(item.deaths)).length);
-  const deathAvailable = finite(player.deaths);
-  const deathRate = deathAvailable ? player.deaths / minutes : null;
-  const deathPressure = deathAvailable ? Math.max(deathRate / 0.22, averageDeaths ? player.deaths / averageDeaths : 0) : 0;
-
-  const economyAvailable = finite(player.gpm) || finite(player.lastHits);
-  const gpmDeficit = finite(player.gpm) ? ratioDeficit(player.gpm, expected.gpm) : null;
-  const lhpm = finite(player.lastHits) ? player.lastHits / minutes : null;
-  const lhDeficit = finite(lhpm) ? ratioDeficit(lhpm, expected.lhpm) : null;
-  const economyRatio = [gpmDeficit, lhDeficit].filter(finite).reduce((sum, value) => sum + value, 0) / Math.max(1, [gpmDeficit, lhDeficit].filter(finite).length);
-
-  const dpm = finite(player.heroDamage) ? player.heroDamage / minutes : null;
-  const damageAvailable = finite(dpm);
-  const participationAvailable = teamKills > 0 && finite(player.kills) && finite(player.assists);
-  const participation = participationAvailable ? (player.kills + player.assists) / teamKills : null;
-  const isSupport = role?.position === 'soft-support' || role?.position === 'hard-support';
-  const supportObserved = [player.obsPlaced, player.senPlaced, player.campsStacked].some(finite);
-  const coreObserved = finite(player.towerDamage);
-  const dutiesAvailable = isSupport ? supportObserved : coreObserved;
-  const wardRate = supportObserved ? ((player.obsPlaced || 0) + (player.senPlaced || 0) * 0.5) / Math.max(1, minutes / 10) : null;
-  const dutiesRatio = isSupport ? Math.max(0, (4 - wardRate) / 4) : Math.max(0, (1200 - player.towerDamage) / 1200);
-  const macroAvailable = finite(player.buybackCount);
-  const macroRatio = macroAvailable ? Math.min(1, player.buybackCount / 2) : 0;
+  const deathPct = percentile(player, 'deaths_per_min');
+  const economyPct = average([percentile(player, 'gold_per_min'), percentile(player, 'last_hits_per_min')]);
+  const damagePct = percentile(player, 'hero_damage_per_min');
+  const participation = participationFor(player, team);
+  const roleCertain = role?.certainty !== 'low' && role?.position !== 'unknown';
+  const isSupport = roleCertain && (role?.position === 'soft-support' || role?.position === 'hard-support');
+  const dutiesObserved = !roleCertain ? null : isSupport ? visionShare(player, team) : percentile(player, 'tower_damage');
+  const dutiesDeficit = finite(dutiesObserved)
+    ? isSupport ? clamp(1 - dutiesObserved * 2, 0, 1) : 1 - dutiesObserved
+    : null;
+  const throwResult = throwEvidence(player, match);
   const abandonAvailable = finite(player.leaverStatus) || finite(player.abandons);
   const abandoned = (player.leaverStatus || 0) > 1 || (player.abandons || 0) > 0;
 
   const components = [
-    component('deaths', weights.deaths, deathAvailable, weights.deaths * Math.min(1, deathPressure / 1.8), player.deaths, 'role/team adjusted', deathAvailable ? [`${player.deaths} deaths`, `${deathRate.toFixed(2)}/min`] : []),
-    component('economy', weights.economy, economyAvailable, weights.economy * economyRatio, { gpm: player.gpm, lhpm }, expected, economyAvailable ? [`GPM ${player.gpm ?? 'n/a'}`, `LH/min ${lhpm?.toFixed(1) ?? 'n/a'}`] : []),
-    component('damage', weights.damage, damageAvailable, weights.damage * ratioDeficit(dpm, expected.dpm), dpm, expected.dpm, damageAvailable ? [`${Math.round(dpm)} DPM`] : []),
-    component('participation', weights.participation, participationAvailable, weights.participation * Math.max(0, (0.55 - participation) / 0.55), participation, 0.55, participationAvailable ? [`${Math.round(participation * 100)}% participation`] : []),
-    component('role-duties', weights['role-duties'], dutiesAvailable, weights['role-duties'] * dutiesRatio, isSupport ? wardRate : player.towerDamage, isSupport ? 4 : 1200, dutiesAvailable ? [isSupport ? `${wardRate.toFixed(1)} vision actions/10m` : `${player.towerDamage} tower damage`] : []),
-    component('macro', weights.macro, macroAvailable, weights.macro * macroRatio, player.buybackCount, 0, macroAvailable ? [`${player.buybackCount} buybacks`] : []),
-    component('abandon', weights.abandon, abandonAvailable, abandoned ? weights.abandon : 0, abandoned, false, abandonAvailable ? [abandoned ? 'confirmed abandon/leaver' : 'no abandon'] : []),
+    component('deaths', weights.deaths, finite(deathPct), weights.deaths * (1 - deathPct), deathPct, 'opendota.benchmarks.deaths_per_min', finite(deathPct) ? [{ percentile: deathPct, deaths: player.deaths ?? null }] : []),
+    component('economy', weights.economy, finite(economyPct), weights.economy * (1 - economyPct), economyPct, 'opendota.benchmarks.economy', finite(economyPct) ? [{ percentile: economyPct, gpm: player.gpm ?? null, lastHits: player.lastHits ?? null }] : []),
+    component('damage', weights.damage, finite(damagePct), weights.damage * (1 - damagePct), damagePct, 'opendota.benchmarks.hero_damage_per_min', finite(damagePct) ? [{ percentile: damagePct, heroDamage: player.heroDamage ?? null }] : []),
+    component('participation', weights.participation, finite(participation), weights.participation * (1 - participation), participation, 'match.teamfight_participation', finite(participation) ? [{ participation }] : []),
+    component('role-duties', weights['role-duties'], finite(dutiesDeficit), weights['role-duties'] * dutiesDeficit, dutiesObserved, isSupport ? 'match.team_vision_share' : 'opendota.benchmarks.tower_damage', finite(dutiesObserved) ? [isSupport ? { share: dutiesObserved, obsPlaced: player.obsPlaced ?? null, senPlaced: player.senPlaced ?? null } : { percentile: dutiesObserved, towerDamage: player.towerDamage ?? null }] : []),
+    component('throw', weights.throw, throwResult.available, weights.throw * throwResult.ratio, throwResult.ratio, 'match.deaths_during_networth_lead', throwResult.evidence),
+    component('abandon', weights.abandon, abandonAvailable, abandoned ? weights.abandon : 0, abandoned, 'match.leaver_status', abandonAvailable ? [{ abandoned, leaverStatus: player.leaverStatus ?? null, abandons: player.abandons ?? null }] : []),
   ];
   const normalized = normalizeScore(components);
-  return { ...normalized, components, flags: abandoned ? ['abandon'] : [], role, profile, modelVersion: MODEL_VERSIONS.ruin };
+  return { ...normalized, components, flags: abandoned ? ['abandon'] : [], role, profile: profileFor(match), modelVersion: MODEL_VERSIONS.ruin };
 }
