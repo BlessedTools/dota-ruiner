@@ -5,7 +5,7 @@ describe('i18n', () => {
   it('keeps RU and EN catalogs complete for public keys', () => {
     const ru = createI18n('ru');
     const en = createI18n('en');
-    for (const key of ['app.title', 'form.matchId', 'actions.analyze', 'states.loading', 'disclaimer', 'demo.label', 'quality.insufficient']) {
+    for (const key of ['app.title', 'form.matchId', 'actions.analyze', 'states.loading', 'disclaimer', 'demo.label', 'quality.insufficient', 'availability.benchmarks', 'metrics.heroDamage', 'insights.survival-low']) {
       expect(ru.t(key)).not.toBe(key);
       expect(en.t(key)).not.toBe(key);
     }
