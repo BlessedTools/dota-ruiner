@@ -82,9 +82,12 @@ describe('safe accessible rendering', () => {
     expect(document.querySelector('[data-duel]').textContent).toContain('815 GPM');
     expect(document.querySelector('[data-duel]').textContent).toContain('ruin-v4.0.0');
     expect(document.querySelector('.duel__hero-art').getAttribute('loading')).toBe('eager');
-    expect(document.querySelector('.duel__item').getAttribute('aria-label')).toBe('Blink Dagger');
+    expect(document.querySelector('.duel__item').getAttribute('alt')).toBe('Blink Dagger');
     expect(document.querySelector('[data-team-comparison="heroDamage"]').textContent).toContain('71 000');
     expect(document.querySelector('[data-match-story]').textContent).toContain('OpenDota не предоставил поминутную экономику.');
+    expect(document.querySelectorAll('.scoreboard-row')).toHaveLength(2);
+    document.querySelector('.scoreboard-row').click();
+    expect(document.querySelector('[data-player-inspector]')).not.toBeNull();
   });
 
   it('announces loading and errors without replacing the live region', () => {

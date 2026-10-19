@@ -18,11 +18,11 @@ function insightText(insight, locale) {
 }
 
 function itemStrip(player) {
-  const list = el('div', { className: 'duel__items', attrs: { 'aria-label': 'Items' } });
+  const list = el('div', { className: 'duel__items', attrs: { role: 'group', 'aria-label': 'Items' } });
   for (const item of [...(player.items || []), player.neutralItemData].filter(Boolean)) {
     list.append(item.image
-      ? el('img', { className: 'duel__item', attrs: { src: item.image, alt: '', width: 42, height: 30, loading: 'lazy', 'aria-label': item.name } })
-      : el('span', { className: 'duel__item duel__item--fallback', text: item.name.slice(0, 2), attrs: { 'aria-label': item.name } }));
+      ? el('img', { className: 'duel__item', attrs: { src: item.image, alt: item.name, width: 42, height: 30, loading: 'lazy' } })
+      : el('span', { className: 'duel__item duel__item--fallback', text: item.name.slice(0, 2), attrs: { role: 'img', 'aria-label': item.name } }));
   }
   return list;
 }

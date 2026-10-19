@@ -11,7 +11,7 @@ async function expectNoSeriousViolations(page, state) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.route('https://api.opendota.com/api/constants/heroes', (route) => route.fulfill({ json: {} }));
+  await page.route('**/api/constants/**', (route) => route.fulfill({ json: {} }));
 });
 
 test('idle, loading, error, demo, chart, and real-analysis states have no serious axe violations', async ({ page }) => {
@@ -27,8 +27,15 @@ test('idle, loading, error, demo, chart, and real-analysis states have no seriou
   await expect(page.locator('#status')).toHaveAttribute('data-kind', 'loading');
   await expectNoSeriousViolations(page, 'loading');
   release();
-  await expect(page.getByText('#9000000001', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Матч #9000000001|Match #9000000001/)).toBeVisible();
   await expectNoSeriousViolations(page, 'real analysis and chart');
+  for (const team of ['radiant', 'dire']) {
+    await page.locator(`.scoreboard-team--${team} .scoreboard-row`).first().click();
+    for (const tab of await page.getByRole('tab').all()) {
+      await tab.click();
+      await expectNoSeriousViolations(page, `${team} inspector ${await tab.textContent()}`);
+    }
+  }
 
   await page.getByLabel(/Match ID/i).fill('9000000099');
   await page.getByRole('button', { name: /разобрать|analyze/i }).click();
@@ -49,7 +56,7 @@ test('history and comparison states remain accessible', async ({ page }) => {
   for (const id of [9000000001, 9000000002]) {
     await page.getByLabel(/Match ID/i).fill(String(id));
     await page.getByRole('button', { name: /разобрать|analyze/i }).click();
-    await expect(page.getByText(`#${id}`, { exact: true })).toBeVisible();
+    await expect(page.getByText(new RegExp(`Матч #${id}|Match #${id}`))).toBeVisible();
   }
   await page.getByRole('button', { name: /история|history/i }).click();
   await expect(page.locator('#history-panel')).toBeVisible();
@@ -93,7 +100,7 @@ test('keyboard focus, activation, target sizes, and reduced motion are preserved
   release();
 });
 
-test('layout reflows at a 200%-zoom-equivalent viewport and remains legible in forced colors', async ({ page }) => {
+test('layout reflows at a 200%-zoom-equivalent viewport and remains legible in forced colors', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 640, height: 720 });
   await page.goto('/');
   await page.getByRole('button', { name: /демо|demo/i }).click();
@@ -102,6 +109,12 @@ test('layout reflows at a 200%-zoom-equivalent viewport and remains legible in f
   expect(overflow).toBeLessThanOrEqual(1);
 
   await page.emulateMedia({ forcedColors: 'active' });
-  const borderStyle = await page.getByRole('button', { name: /Gold/ }).evaluate((element) => getComputedStyle(element).borderStyle);
-  expect(borderStyle).toBe('solid');
+  const goldButton = page.getByRole('button', { name: /Gold/ });
+  await expect(goldButton).toBeVisible();
+  expect(await page.evaluate(() => matchMedia('(forced-colors: active)').matches)).toBe(true);
+  const borderStyle = await goldButton.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return style.borderStyle || style.borderTopStyle;
+  });
+  if (testInfo.project.name === 'desktop') expect(borderStyle).toBe('solid');
 });

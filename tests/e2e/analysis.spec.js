@@ -5,7 +5,7 @@ const ranked = JSON.parse(readFileSync(new URL('../fixtures/ranked.json', import
 const partial = JSON.parse(readFileSync(new URL('../fixtures/partial.json', import.meta.url), 'utf8'));
 
 async function prepare(page) {
-  await page.route('https://api.opendota.com/api/constants/heroes', (route) => route.fulfill({ json: {} }));
+  await page.route('**/api/constants/**', (route) => route.fulfill({ json: {} }));
 }
 
 async function analyze(page, id) {
@@ -22,9 +22,9 @@ test('successful fixture analysis uses only the requested OpenDota response', as
   await page.goto('/');
   await analyze(page, 9000000001);
 
-  await expect(page.getByText('#9000000001', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Матч #9000000001|Match #9000000001/)).toBeVisible();
   await expect(page.getByText('Carry', { exact: true }).first()).toBeVisible();
-  await expect(page.locator('.verdict-card .score').first()).not.toHaveText('—');
+  await expect(page.locator('.duel-card__score').first()).not.toHaveText(/—/);
   await expect(page.locator('[data-demo-label]')).toHaveCount(0);
   await expect(page).toHaveURL(/#9000000001$/);
 });
@@ -45,11 +45,33 @@ test('partial data suppresses verdicts and labels unknown heroes and limitations
   await page.goto('/');
   await analyze(page, 9000000003);
 
-  await expect(page.getByText(/Недостаточно данных|Insufficient data/).first()).toBeVisible();
-  await expect(page.getByText('Hero 999', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/Данных недостаточно|Insufficient data/).first()).toBeVisible();
+  await expect(page.locator('.player-card', { hasText: 'Hero 999' }).first()).toBeVisible();
   await expect(page.getByText(/Неизвестный герой|Unknown hero/)).toBeVisible();
   await expect(page.getByText(/Часть метрик|Some player metrics/)).toBeVisible();
-  await expect(page.locator('.verdict-card .score')).toHaveCount(0);
+  await expect(page.locator('.duel-card__score')).toHaveCount(0);
+});
+
+test('native scoreboard rows open a keyboard-accessible player inspector', async ({ page }) => {
+  await page.route('**/api/matches/9000000001', (route) => route.fulfill({ json: ranked }));
+  await page.goto('/');
+  await analyze(page, 9000000001);
+  const radiantRow = page.locator('.scoreboard-team--radiant .scoreboard-row').first();
+  await radiantRow.focus();
+  await page.keyboard.press('Enter');
+  await expect(radiantRow).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('[data-player-inspector]')).toBeVisible();
+  for (const name of ['Экономика', 'Бой', 'Поддержка', 'Оценка']) {
+    const tab = page.getByRole('tab', { name, exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[role="tabpanel"]:visible')).toHaveCount(1);
+  }
+  const direRow = page.locator('.scoreboard-team--dire .scoreboard-row').first();
+  await direRow.focus();
+  await page.keyboard.press('Space');
+  await expect(direRow).toHaveAttribute('aria-expanded', 'true');
+  await expect(radiantRow).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('the latest of two rapid searches wins even when the first response arrives last', async ({ page }) => {
@@ -67,9 +89,9 @@ test('the latest of two rapid searches wins even when the first response arrives
   await page.getByLabel(/Match ID/i).fill('9000000002');
   await page.getByRole('button', { name: /разобрать|analyze/i }).click();
 
-  await expect(page.getByText('#9000000002', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Матч #9000000002|Match #9000000002/)).toBeVisible();
   await expect(page.getByText('Latest Result', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('#9000000001', { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Матч #9000000001|Match #9000000001/)).toHaveCount(0);
 });
 
 test('loading, language switching, anonymous players, and no-timeline fallback stay usable', async ({ page }) => {
@@ -77,7 +99,7 @@ test('loading, language switching, anonymous players, and no-timeline fallback s
   const responseReady = new Promise((resolve) => { release = resolve; });
   const withoutTimeline = structuredClone(ranked);
   withoutTimeline.match_id = 9000000004;
-  withoutTimeline.players.forEach((player) => { delete player.gold_t; delete player.xp_t; delete player.personaname; });
+  withoutTimeline.players.forEach((player) => { delete player.networth_t; delete player.gold_t; delete player.xp_t; delete player.personaname; });
   await page.route('**/api/matches/9000000004', async (route) => {
     await responseReady;
     await route.fulfill({ json: withoutTimeline });
@@ -88,13 +110,13 @@ test('loading, language switching, anonymous players, and no-timeline fallback s
   await expect(page.locator('#status')).toHaveAttribute('aria-busy', 'true');
   release();
 
-  await expect(page.getByText('#9000000004', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Матч #9000000004|Match #9000000004/)).toBeVisible();
   await expect(page.getByText('Anti-Mage', { exact: true }).first()).toBeVisible();
   await expect(page.getByText(/Временная шкала недоступна|Timeline unavailable/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Gold' })).toBeDisabled();
   await page.getByRole('button', { name: 'Switch language' }).click();
   await expect(page.getByRole('button', { name: 'Analyze match' })).toBeVisible();
-  await expect(page.locator('#disclaimer')).toContainText('explainable heuristics');
+  await expect(page.locator('#disclaimer')).toContainText('explainable heuristic');
   await page.reload();
   await expect(page.getByRole('button', { name: 'Analyze match' })).toBeVisible();
 });
@@ -108,8 +130,8 @@ test('unusual 9-player and 11-player matches remain analyzable with a warning', 
     await page.route(`**/api/matches/${fixture.match_id}`, (route) => route.fulfill({ json: fixture }));
     await page.goto('/');
     await analyze(page, fixture.match_id);
-    await expect(page.getByText(`#${fixture.match_id}`, { exact: true })).toBeVisible();
+    await expect(page.getByText(new RegExp(`Матч #${fixture.match_id}|Match #${fixture.match_id}`))).toBeVisible();
     await expect(page.getByText(/Нестандартное число игроков|Unusual player count/)).toBeVisible();
-    await expect(page.locator('.player-row')).toHaveCount(count);
+    await expect(page.locator('.player-card')).toHaveCount(count);
   }
 });

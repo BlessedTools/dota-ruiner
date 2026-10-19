@@ -2,6 +2,7 @@ import { el, formatNumber, heroPortrait } from './dom.js';
 import { renderDuel } from './duel.js';
 import { renderMatchArena } from './match-arena.js';
 import { renderMatchStory } from './match-story.js';
+import { renderScoreboard } from './scoreboard.js';
 
 function observedFactors(player) {
   const factors = player?.ruin?.components || [];
@@ -43,7 +44,7 @@ export function renderAnalysis(container, analysis, i18n) {
   if (analysis.source === 'demo') fragment.append(el('div', { className: 'demo-banner', text: i18n.t('demo.label'), attrs: { 'data-demo-label': '', role: 'status' } }));
   fragment.append(renderMatchArena(analysis, i18n), renderDuel(analysis, i18n), renderMatchStory(analysis, i18n));
   fragment.append(el('section', { className: 'chart-panel', attrs: { 'data-chart-host': '', 'aria-label': i18n.t('chart.timeline') } }));
-  fragment.append(renderLineups(analysis, i18n));
+  fragment.append(renderScoreboard(analysis, i18n));
   if (analysis.warnings?.length) {
     const warnings = el('section', { className: 'warnings' }, el('h2', { text: i18n.t('labels.warnings') }));
     const list = el('ul');
