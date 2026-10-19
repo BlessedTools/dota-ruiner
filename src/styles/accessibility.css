@@ -1,0 +1,18 @@
+.button--primary {
+  background: #b82432;
+}
+
+.chart-tooltip,
+.chart-unavailable {
+  display: block;
+  margin-top: 0.75rem;
+  color: var(--muted);
+}
+
+.chart-panel [hidden] {
+  display: none !important;
+}
+
+.app-main:has(#results:not(:empty)) > #disclaimer {
+  display: none;
+}

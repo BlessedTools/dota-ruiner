@@ -1,0 +1,28 @@
+{
+  "name": "dota-ruiner",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "start": "node --env-file-if-exists=.env server.js",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "screenshots": "npm run build && node scripts/capture-screenshots.mjs",
+    "test:server-browser": "node scripts/smoke-server.mjs",
+    "check": "npm test && npm run build && npm run test:server-browser && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "jsdom": "29.0.1",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

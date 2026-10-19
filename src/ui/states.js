@@ -1,0 +1,4 @@
+export function renderIdle(status,i18n){status.removeAttribute('role');status.setAttribute('aria-busy','false');status.dataset.kind='idle';status.textContent=i18n.t('states.idle');}
+export function renderLoading(status,i18n){status.removeAttribute('role');status.setAttribute('aria-busy','true');status.dataset.kind='loading';status.textContent=i18n.t('states.loading');}
+export function renderError(status,code,i18n){status.setAttribute('aria-busy','false');status.setAttribute('role','alert');status.dataset.kind='error';const key=`states.${code}`;status.textContent=i18n.t(key)===key?i18n.t('states.error'):i18n.t(key);}
+export function renderReady(status,i18n){status.removeAttribute('role');status.setAttribute('aria-busy','false');status.dataset.kind='ready';status.textContent=i18n.t('states.ready');}

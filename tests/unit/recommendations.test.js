@@ -1,0 +1,15 @@
+import { describe, expect, it } from 'vitest';
+import { buildRecommendations } from '../../src/domain/recommendations.js';
+
+describe('buildRecommendations', () => {
+  it('builds evidence-backed weaknesses and strengths only from available components', () => {
+    const result = buildRecommendations({ components: [
+      { id: 'deaths', available: true, points: 20, maxPoints: 25, evidence: ['10 deaths'] },
+      { id: 'damage', available: true, points: 1, maxPoints: 20, evidence: ['700 DPM'] },
+      { id: 'vision', available: false, points: 0, maxPoints: 10, evidence: [] },
+    ] });
+    expect(result.weaknesses.map((item) => item.id)).toEqual(['deaths']);
+    expect(result.strengths.map((item) => item.id)).toEqual(['damage']);
+    expect(result.weaknesses.concat(result.strengths).some((item) => item.id === 'vision')).toBe(false);
+  });
+});
