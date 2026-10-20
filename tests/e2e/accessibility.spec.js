@@ -118,3 +118,12 @@ test('layout reflows at a 200%-zoom-equivalent viewport and remains legible in f
   });
   if (testInfo.project.name === 'desktop') expect(borderStyle).toBe('solid');
 });
+
+test('mobile war room has no horizontal overflow at 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: /демо|demo/i }).click();
+  await expect(page.locator('[data-demo-label]')).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});

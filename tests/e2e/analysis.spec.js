@@ -135,3 +135,29 @@ test('unusual 9-player and 11-player matches remain analyzable with a warning', 
     await expect(page.locator('.player-card')).toHaveCount(count);
   }
 });
+
+test('desktop war room keeps the Duel balanced and both scoreboards aligned', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.route('**/api/matches/9000000001', (route) => route.fulfill({ json: ranked }));
+  await page.goto('/');
+  await analyze(page, 9000000001);
+  await expect(page.locator('.duel')).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const duel = document.querySelector('.duel');
+    const cards = [...document.querySelectorAll('.duel-card')].map((node) => node.getBoundingClientRect());
+    const teams = [...document.querySelectorAll('.scoreboard-team')].map((node) => node.getBoundingClientRect());
+    const title = document.querySelector('.match-arena h2')?.getBoundingClientRect();
+    const score = document.querySelector('.match-board__score')?.getBoundingClientRect();
+    return {
+      duelDisplay: getComputedStyle(duel).display,
+      cardDelta: Math.abs(cards[0].width - cards[1].width),
+      teamDelta: Math.abs(teams[0].width - teams[1].width),
+      titleScoreOverlap: title && score ? !(title.right <= score.left || score.right <= title.left || title.bottom <= score.top || score.bottom <= title.top) : true,
+    };
+  });
+  expect(layout.duelDisplay).toBe('grid');
+  expect(layout.cardDelta).toBeLessThanOrEqual(2);
+  expect(layout.teamDelta).toBeLessThanOrEqual(2);
+  expect(layout.titleScoreOverlap).toBe(false);
+});

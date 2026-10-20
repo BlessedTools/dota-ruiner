@@ -1,18 +1,3 @@
-.button--primary {
-  background: #b82432;
-}
-
-.chart-tooltip,
-.chart-unavailable {
-  display: block;
-  margin-top: 0.75rem;
-  color: var(--muted);
-}
-
-.chart-panel [hidden] {
-  display: none !important;
-}
-
-.app-main:has(#results:not(:empty)) > #disclaimer {
-  display: none;
-}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@media(forced-colors:active){.button,.search-panel,.match-arena,.duel,.duel-card,.match-story,.chart-panel,.scoreboard,.scoreboard-row,.player-inspector,.warnings,.methodology{border:2px solid CanvasText!important}.brand-mark,.duel__hero-art{clip-path:none;filter:none}.team-comparison__track>span,.availability-chip{forced-color-adjust:auto}}
+@media print{.app-header,.search-panel,.status,.site-footer{display:none!important}body{color:#111;background:#fff}#results{display:block}.match-arena,.duel,.match-story,.chart-panel,.scoreboard{break-inside:avoid;margin-bottom:1rem;color:#111;background:#fff;box-shadow:none}}
