@@ -1,4 +1,7 @@
+import { buildTimeline } from '../domain/timeline.js';
+
 const METRICS = {
+  networth: { field: 'networth_t', label: 'Net worth' },
   gold: { field: 'gold_t', label: 'Gold' },
   xp: { field: 'xp_t', label: 'XP' },
   heroDamage: { field: 'heroDamage_t', label: 'Hero Damage' },
@@ -6,9 +9,7 @@ const METRICS = {
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 
 export function getAvailableChartMetrics(match) {
-  return Object.entries(METRICS)
-    .filter(([, metric]) => match.players.some((player) => Array.isArray(player[metric.field]) && player[metric.field].filter(finite).length >= 2))
-    .map(([key]) => key);
+  return buildTimeline(match).metrics.map((metric) => metric.key);
 }
 
 export function buildChartSeries(match, metricKey) {
@@ -110,18 +111,30 @@ function renderTable(table, series, getHeroName, labels) {
 }
 
 export function createMatchChart(container, { match, getHeroName = (id) => `Hero ${id}`, leaders = {}, labels = {} }) {
+  const timeline = buildTimeline(match);
   let metric = getAvailableChartMetrics(match)[0] || null;
   let currentSeries = [];
   const heading = element('h2', { text: labels.timeline || 'Match timeline' });
   const controls = element('div', { className: 'chart-controls', attrs: { role: 'group', 'aria-label': labels.metric || 'Chart metric' } });
+  const source = element('p', { className: 'chart-source' });
   const unavailable = element('p', { className: 'chart-unavailable', text: labels.unavailable || 'Timeline unavailable — final observed values remain in player summaries.' });
   const canvas = element('canvas', { className: 'match-chart', attrs: { role: 'img', 'aria-label': labels.observed || 'Observed match timeline', tabindex: '0' } });
   const tooltip = element('output', { className: 'chart-tooltip', attrs: { 'aria-live': 'polite' } });
   const tableWrap = element('div', { className: 'chart-table-wrap', attrs: { tabindex: '0', role: 'region', 'aria-label': labels.scrollable || 'Scrollable chart data' } });
   const table = element('table', { className: 'chart-table', attrs: { 'aria-label': labels.data || 'Chart data' } });
   tableWrap.append(table);
-  container.replaceChildren(heading, controls, unavailable, canvas, tooltip, tableWrap);
-  const available = getAvailableChartMetrics(match);
+  const dataDisclosure = element('details', { className: 'chart-data-disclosure' });
+  dataDisclosure.append(element('summary', { text: labels.data || 'Chart data' }), tableWrap);
+  const events = element('ol', { className: 'chart-events', attrs: { 'aria-label': labels.events || 'Observed match events' } });
+  const eventNames = {
+    death: labels.death || 'Death', buyback: labels.buyback || 'Buyback',
+    objective: labels.objective || 'Objective', teamfight: labels.teamfight || 'Teamfight',
+  };
+  timeline.events.forEach((event) => events.append(element('li', {
+    text: `${Math.floor(event.time / 60)}:${String(Math.max(0, event.time % 60)).padStart(2, '0')} · ${eventNames[event.type]} · ${event.source}`,
+  })));
+  container.replaceChildren(heading, controls, source, unavailable, canvas, tooltip, dataDisclosure, events);
+  const available = timeline.metrics.map((entry) => entry.key);
 
   function showMinute(minute) {
     if (!currentSeries.length) return;
@@ -144,12 +157,15 @@ export function createMatchChart(container, { match, getHeroName = (id) => `Hero
       controls.append(button);
     }
     currentSeries = metric ? buildChartSeries(match, metric) : [];
+    source.textContent = timeline.metrics.find((entry) => entry.key === metric)?.source || '';
+    source.hidden = !source.textContent;
     draw(canvas, currentSeries, leaders);
     renderTable(table, currentSeries, getHeroName, labels);
     unavailable.hidden = currentSeries.length > 0;
     canvas.hidden = currentSeries.length === 0;
     tooltip.hidden = currentSeries.length === 0;
     tableWrap.hidden = currentSeries.length === 0;
+    dataDisclosure.hidden = currentSeries.length === 0;
     if (currentSeries.length) showMinute(currentSeries[0].points.length - 1);
   }
   const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => render()) : null;
