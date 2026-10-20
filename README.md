@@ -1,14 +1,14 @@
 # DOTA RUINER
 
-[![CI](https://github.com/morphlxngg/dota-ruiner/actions/workflows/ci.yml/badge.svg)](https://github.com/morphlxngg/dota-ruiner/actions/workflows/ci.yml)
-[![GitHub Pages](https://github.com/morphlxngg/dota-ruiner/actions/workflows/pages.yml/badge.svg)](https://morphlxngg.github.io/dota-ruiner/)
+[![CI](https://github.com/BlessedTools/dota-ruiner/actions/workflows/ci.yml/badge.svg)](https://github.com/BlessedTools/dota-ruiner/actions/workflows/ci.yml)
+[![GitHub Pages](https://github.com/BlessedTools/dota-ruiner/actions/workflows/pages.yml/badge.svg)](https://blessedtools.github.io/dota-ruiner/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)](LICENSE)
 
 Объяснимый разбор публичного матча Dota 2 по данным OpenDota. Приложение показывает отдельно Ruin Score и Impact Score, раскрывает использованные факторы и явно сообщает, когда данных для вердикта недостаточно.
 
 > Оценки — детерминированная эвристика по доступным данным, а не доказательство вины, намерений игрока или причины поражения. Числовой «вероятности виновности» в проекте нет.
 
-[Открыть GitHub Pages](https://morphlxngg.github.io/dota-ruiner/)
+[Открыть GitHub Pages](https://blessedtools.github.io/dota-ruiner/)
 
 ![DOTA RUINER desktop analysis](docs/screenshots/analysis-desktop.png)
 
@@ -21,9 +21,9 @@
 
 ## Что входит
 
-- реальные `gold_t` и `xp_t` OpenDota; Hero Damage timeline отключён, если временного ряда нет;
-- роли Safe Core / Mid / Offlane / Soft Support / Hard Support с видимой категорией определённости;
-- версионированные `ruin-v2.0.0` и `impact-v2.0.0`, компоненты «что ухудшило» и «что помогло»;
+- реальные `networth_t`, `gold_t`, `xp_t` и `hero_damage_t` OpenDota; недоступные временные ряды отключаются;
+- роли Safe Core / Mid / Offlane / Soft Support / Hard Support: сначала `position_est`, затем lane/support evidence, с видимой категорией определённости;
+- версионированные `ruin-v4.0.0` и `impact-v4.0.0`, основанные на OpenDota hero percentiles и наблюдаемых фактах матча;
 - Steam `personaname`, если имя присутствует в ответе; безопасный fallback по герою без дополнительных запросов на деанонимизацию;
 - история до 15 компактных анализов, сравнение двух последних матчей и экспорт PNG;
 - RU/EN, адаптивный интерфейс, keyboard navigation, reduced motion и axe-проверки;
@@ -32,7 +32,7 @@
 
 ## Достоверность данных
 
-Нормализатор сохраняет отсутствующие метрики как `null`; отсутствие не превращается в ноль и не штрафует игрока. Процент «Покрытие данных» означает только долю весов модели, для которых нашлись пригодные поля. Это не статистическая уверенность.
+Нормализатор сохраняет отсутствующие метрики как `null`; отсутствие не превращается в ноль и не штрафует игрока. Интерфейс показывает число доступных факторов (`7/7`, `4/7`), а внутренний процент покрытия используется только для категориального quality gate. Это не статистическая уверенность.
 
 | Покрытие | Вывод |
 | --- | --- |
@@ -41,25 +41,27 @@
 | `70–84%` | среднее качество |
 | `85–100%` | потенциально высокое; понижается при слабой роли или малом разрыве лидеров |
 
-Матчи 9/11 игроков показываются с предупреждением. Матчи короче пяти минут, без двух команд или без двух пригодных игроков отклоняются контролируемо. Турбо использует отдельный профиль. Неполностью распарсенные матчи помечаются.
+Матчи 9/11 игроков показываются с предупреждением. Матчи короче пяти минут, без двух команд или без двух пригодных игроков отклоняются контролируемо. Неполностью распарсенные матчи помечаются; без benchmark-данных зависящие от них факторы не рассчитываются.
 
-### Ruin Score v2
+### Ruin Score v4
 
 | Компонент | Вес | Наблюдаемая основа |
 | --- | ---: | --- |
-| Смерти | 25 | смерти/мин и относительно команды |
-| Экономика | 20 | GPM и LH/мин относительно роли и режима |
-| Урон | 20 | DPM относительно роли |
-| Участие | 15 | `(kills + assists) / team kills` |
-| Обязанности роли | 10 | вижен/стэки для поддержки или урон строениям для core |
-| Macro | 10 | только наблюдаемый `buyback_count` |
+| Смерти | 25 | quality-oriented `benchmarks.deaths_per_min.pct` OpenDota |
+| Экономика | 20 | percentiles GPM и LH/мин для героя |
+| Урон | 15 | percentile hero damage/min для героя |
+| Участие | 15 | `teamfight_participation`, fallback `(kills + assists) / team kills` |
+| Обязанности роли | 10 | доля командного вижена для support или tower-damage percentile для core |
+| Throw | 15 | смерти после 30-й минуты только при наблюдаемом лидерстве команды по `networth_t` |
 | Abandon | до 20 | подтверждённый leaver/abandon; итог всегда ограничен 100 |
 
-### Impact Score v2
+Сам факт байбэка не штрафуется: без контекста тайминга он не доказывает ошибку.
 
-Impact не равен `100 - Ruin`. Его веса: участие 25, вклад уроном/utility 25, экономика 15, объекты 15, обязанности роли 10, выживаемость 10.
+### Impact Score v4
 
-Все веса и benchmarks находятся в [`src/data/scoring-config.js`](src/data/scoring-config.js). Формулы покрыты unit-тестами. Изменение формулы требует новой версии модели и миграционного пояснения — см. [CONTRIBUTING.md](CONTRIBUTING.md).
+Impact не равен `100 - Ruin`. Его веса: участие 20, вклад hero/kills/assists/healing percentiles 25, экономика 20, объекты 15, обязанности роли 10, выживаемость 10.
+
+Версии и веса находятся в [`src/data/scoring-config.js`](src/data/scoring-config.js); benchmark percentiles приходят в parsed match response OpenDota. Формулы покрыты unit-тестами. Изменение формулы требует новой версии модели и миграционного пояснения — см. [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Архитектура
 
@@ -112,7 +114,7 @@ Workflow собирает `dist` с base path репозитория и публ
 
 ## PWA и приватность
 
-Service worker кэширует только собранную оболочку. История хранит до 15 версионированных компактных snapshots и downsampled timeline, примерно до 2.5 МБ; raw API-ответы и ключи не сохраняются. Ошибки quota/corrupt JSON не ломают текущий анализ. Демо вымышлено, неизменно, помечено `ДЕМО / DEMO` и не входит в историю реальных матчей.
+Service worker кэширует только собранную оболочку. История schema v3 хранит до 15 версионированных компактных snapshots и только ограниченные наблюдаемые timeline, примерно до 2.5 МБ; raw API-ответы, журналы событий и ключи не сохраняются. Записи schema v2 мигрируют безопасно, а открытая из истории запись явно помечается как локальная офлайн-копия. Ошибки quota/corrupt JSON не ломают текущий анализ. Демо вымышлено, неизменно, помечено `ДЕМО / DEMO` и не входит в историю реальных матчей.
 
 ## Команды
 

@@ -4,6 +4,15 @@ import { inferRole } from '../../src/domain/roles.js';
 const player = (overrides = {}) => ({ slot: 0, gpm: 400, lastHits: 180, laneRole: null, lane: null, isRoaming: null, obsPlaced: null, senPlaced: null, purchase: null, ...overrides });
 
 describe('inferRole', () => {
+  it('prefers OpenDota position estimate over a lane assignment that is not a farm position', () => {
+    const support = player({ positionEstimate: 5, laneRole: 3, gpm: 430, lastHits: 70 });
+    expect(inferRole(support, [support], { roles: ['Support', 'Nuker'] })).toMatchObject({
+      position: 'hard-support',
+      certainty: 'medium',
+      evidence: ['position-estimate:5'],
+    });
+  });
+
   it('uses observed lane evidence before farm rank', () => {
     const strugglingCarry = player({ laneRole: 1, gpm: 210, lastHits: 120 });
     const team = [strugglingCarry, player({ slot: 1, gpm: 700 }), player({ slot: 2, gpm: 600 }), player({ slot: 3, gpm: 500 }), player({ slot: 4, gpm: 450 })];

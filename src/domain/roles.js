@@ -4,6 +4,16 @@ function finite(value) {
 
 export function inferRole(player, team = [], hero = null) {
   const evidence = [];
+  const estimatedPositions = {
+    1: 'safe-core',
+    2: 'mid',
+    3: 'offlane',
+    4: 'soft-support',
+    5: 'hard-support',
+  };
+  if (estimatedPositions[player?.positionEstimate]) {
+    return { position: estimatedPositions[player.positionEstimate], certainty: 'medium', evidence: [`position-estimate:${player.positionEstimate}`] };
+  }
   if (player?.laneRole === 2) return { position: 'mid', certainty: 'high', evidence: ['lane-role:mid'] };
   if (player?.laneRole === 3) return { position: 'offlane', certainty: 'high', evidence: ['lane-role:offlane'] };
   if (player?.isRoaming === true) return { position: 'soft-support', certainty: 'high', evidence: ['is-roaming'] };

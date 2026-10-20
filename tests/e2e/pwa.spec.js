@@ -33,9 +33,13 @@ test('latest saved real analysis remains discoverable offline', async ({ page, c
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.getByLabel(/Match ID/i).fill('9000000001');
   await page.getByRole('button', { name: /разобрать|analyze/i }).click();
-  await expect(page.getByText('#9000000001', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Матч #9000000001|Match #9000000001/)).toBeVisible();
   await context.setOffline(true);
   await page.reload();
   await page.getByRole('button', { name: /история|history/i }).click();
   await expect(page.getByRole('button', { name: /9000000001/ })).toBeVisible();
+  await page.getByRole('button', { name: /9000000001/ }).click();
+  await expect(page.locator('[data-cache-label]')).toContainText(/СОХРАНЕНО|CACHED/);
+  const privateCacheEntries = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async (key) => (await caches.open(key)).keys()))).flat().filter((request) => new URL(request.url).searchParams.has('api_key')).length);
+  expect(privateCacheEntries).toBe(0);
 });

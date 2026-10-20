@@ -120,7 +120,12 @@ function applyCopy() {
   elements.locale.textContent = i18n.locale === 'ru' ? 'EN' : 'RU';
   elements.locale.setAttribute('aria-label', i18n.locale === 'ru' ? 'Switch language — EN' : 'Переключить язык — RU');
   document.querySelector('#disclaimer').textContent = i18n.t('disclaimer');
-  if (currentAnalysis) displayAnalysis(currentAnalysis);
+  if (currentAnalysis) {
+    const localized = currentAnalysis.match
+      ? buildAnalysis(currentAnalysis.match, currentConstants, i18n.locale, currentAnalysis.warnings)
+      : currentAnalysis;
+    displayAnalysis(localized);
+  }
   else {
     renderIdle(elements.status, i18n);
     renderHistory();

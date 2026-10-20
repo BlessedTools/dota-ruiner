@@ -48,7 +48,6 @@ function draw(canvas, series, leaders = {}) {
   const dpr = Math.max(1, globalThis.devicePixelRatio || 1);
   canvas.width = width * dpr;
   canvas.height = height * dpr;
-  canvas.style.height = `${height}px`;
   const ctx = canvas.getContext?.('2d');
   if (!ctx) return;
   ctx.scale(dpr, dpr);

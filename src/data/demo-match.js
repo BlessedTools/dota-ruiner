@@ -34,5 +34,27 @@ function deepFreeze(value) {
 export const DEMO_MATCH = deepFreeze(demo);
 
 export function createDemoAnalysisInput() {
-  return structuredClone(DEMO_MATCH);
+  const copy = structuredClone(DEMO_MATCH);
+  copy.players.forEach((player, index) => {
+    const minutes = copy.duration / 60;
+    const isStandout = index === 0 || index === 1;
+    const isStruggling = index === 5;
+    const base = isStandout ? 0.82 : isStruggling ? 0.12 : Math.max(0.28, 0.68 - index * 0.025);
+    const deathPercentile = isStruggling ? 0.96 : Math.min(0.86, Math.max(0.12, (player.deaths || 0) / 10));
+    player.position_est = (index % 5) + 1;
+    player.teamfight_participation = Math.min(1, ((player.kills || 0) + (player.assists || 0)) / Math.max(1, index < 5 ? copy.radiant_score : copy.dire_score));
+    player.networth_t = player.gold_t?.map((value) => value + 600) || null;
+    player.net_worth = player.networth_t?.at(-1) ?? Math.round(player.gold_per_min * minutes);
+    player.benchmarks = {
+      gold_per_min: { raw: player.gold_per_min, pct: base },
+      xp_per_min: { raw: player.xp_per_min, pct: Math.min(0.98, base + 0.03) },
+      last_hits_per_min: { raw: player.last_hits / minutes, pct: base },
+      hero_damage_per_min: { raw: player.hero_damage / minutes, pct: isStruggling ? 0.1 : base },
+      kills_per_min: { raw: player.kills / minutes, pct: base },
+      assists_per_min: { raw: player.assists / minutes, pct: Math.min(0.98, base + 0.06) },
+      deaths_per_min: { raw: player.deaths / minutes, pct: deathPercentile },
+      tower_damage: { raw: player.tower_damage, pct: isStruggling ? 0.08 : base },
+    };
+  });
+  return copy;
 }

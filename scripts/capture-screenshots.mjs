@@ -17,10 +17,22 @@ try {
   for (const [name, use] of [['desktop', devices['Desktop Chrome']], ['mobile', devices['Pixel 7']]]) {
     const context = await browser.newContext({ ...use, colorScheme: 'dark' });
     const page = await context.newPage();
-    await page.route('https://api.opendota.com/api/constants/heroes', (route) => route.fulfill({ json: {} }));
+    await page.route('**/api/constants/**', (route) => route.fulfill({ json: {} }));
     await page.goto(`http://127.0.0.1:${port}/`);
     await page.getByRole('button', { name: /демо|demo/i }).click();
     await page.locator('[data-demo-label]').waitFor();
+    await page.evaluate(async () => {
+      for (let y = 0; y <= document.documentElement.scrollHeight; y += innerHeight) {
+        scrollTo(0, y);
+        await new Promise((resolve) => setTimeout(resolve, 40));
+      }
+      await Promise.all([...document.images].map((image) => image.complete
+        ? Promise.resolve()
+        : new Promise((resolve) => { image.addEventListener('load', resolve, { once: true }); image.addEventListener('error', resolve, { once: true }); })));
+      scrollTo(0, 0);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    await page.evaluate(() => document.body.classList.add('screenshot-mode'));
     await page.screenshot({ path: path.join(output, `analysis-${name}.png`), fullPage: true });
     await context.close();
   }

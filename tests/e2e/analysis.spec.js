@@ -116,6 +116,7 @@ test('loading, language switching, anonymous players, and no-timeline fallback s
   await expect(page.getByRole('button', { name: 'Gold' })).toBeDisabled();
   await page.getByRole('button', { name: 'Switch language' }).click();
   await expect(page.getByRole('button', { name: 'Analyze match' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What happened in the match' })).toBeVisible();
   await expect(page.locator('#disclaimer')).toContainText('explainable heuristic');
   await page.reload();
   await expect(page.getByRole('button', { name: 'Analyze match' })).toBeVisible();
@@ -160,4 +161,6 @@ test('desktop war room keeps the Duel balanced and both scoreboards aligned', as
   expect(layout.cardDelta).toBeLessThanOrEqual(2);
   expect(layout.teamDelta).toBeLessThanOrEqual(2);
   expect(layout.titleScoreOverlap).toBe(false);
+  await page.setViewportSize({ width: 1265, height: 900 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
 });

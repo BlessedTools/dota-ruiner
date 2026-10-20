@@ -6,7 +6,7 @@ test('real analyses enter history while demo stays separate', async ({ page }) =
   await page.goto('/');
   await page.getByLabel(/Match ID/i).fill('9000000001');
   await page.getByRole('button', { name: /разобрать|analyze/i }).click();
-  await expect(page.getByText('#9000000001', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Матч #9000000001|Match #9000000001/)).toBeVisible();
   await page.getByRole('button', { name: /история|history/i }).click();
   await expect(page.getByRole('button', { name: /9000000001/ })).toBeVisible();
   await page.getByRole('button', { name: /демо|demo/i }).click();

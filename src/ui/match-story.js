@@ -11,8 +11,8 @@ function comparisonRow(comparison, locale) {
       el('span', { text: comparison.complete ? `${formatNumber(comparison.radiant, locale)} : ${formatNumber(comparison.dire, locale)}` : (ru ? 'Неполные данные' : 'Partial data') }),
     ]),
     el('div', { className: 'team-comparison__track' }, [
-      el('span', { className: 'team-comparison__radiant', attrs: { style: `--value:${Math.round(((comparison.radiant || 0) / maximum) * 100)}%`, 'aria-hidden': 'true' } }),
-      el('span', { className: 'team-comparison__dire', attrs: { style: `--value:${Math.round(((comparison.dire || 0) / maximum) * 100)}%`, 'aria-hidden': 'true' } }),
+      el('progress', { className: 'team-comparison__radiant', attrs: { max: maximum, value: comparison.radiant || 0, 'aria-hidden': 'true' } }),
+      el('progress', { className: 'team-comparison__dire', attrs: { max: maximum, value: comparison.dire || 0, 'aria-hidden': 'true' } }),
     ]),
   ]);
 }

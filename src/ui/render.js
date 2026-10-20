@@ -42,6 +42,7 @@ function renderLineups(analysis, i18n) {
 export function renderAnalysis(container, analysis, i18n) {
   const fragment = document.createDocumentFragment();
   if (analysis.source === 'demo') fragment.append(el('div', { className: 'demo-banner', text: i18n.t('demo.label'), attrs: { 'data-demo-label': '', role: 'status' } }));
+  if (analysis.cacheState === 'cached') fragment.append(el('div', { className: 'cache-banner', text: i18n.t('cache.label'), attrs: { 'data-cache-label': '', role: 'status' } }));
   fragment.append(renderMatchArena(analysis, i18n), renderDuel(analysis, i18n), renderMatchStory(analysis, i18n));
   fragment.append(el('section', { className: 'chart-panel', attrs: { 'data-chart-host': '', 'aria-label': i18n.t('chart.timeline') } }));
   fragment.append(renderScoreboard(analysis, i18n));
